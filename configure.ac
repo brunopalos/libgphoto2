@@ -368,7 +368,7 @@ GP_CHECK_LIBRARY([LIBCURL],[libcurl],[>= 7.1],
                 [default-on],
 		[https://www.curl.org]
 )
-GP_CONFIG_MSG([CURL support for Lumix Wifi],[${have_LIBCURL}])
+GP_CONFIG_MSG([CURL support for Lumix and E-M10 Wifi],[${have_LIBCURL}])
 
 dnl ---------------------------------------------------------------------------
 dnl check for libgd
@@ -538,6 +538,7 @@ AM_COND_IF([HAVE_LIBXML2], [dnl
 GP_CAMLIB([lumix])dnl
 ])
 ])
+GP_CAMLIB([em10])dnl
 GP_CAMLIB([mars])dnl
 GP_CAMLIB([dimagev])dnl
 GP_CAMLIB([mustek],[outdated])dnl
