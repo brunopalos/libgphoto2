@@ -66,7 +66,7 @@ typedef struct
 {
 	char *data;
 	size_t size;
-} OlympusMemoryBuffer;
+} Em10MemoryBuffer;
 
 struct _CameraPrivateLibrary
 {
@@ -228,14 +228,34 @@ int storage_info_func(CameraFilesystem *fs,
  */
 /**********************************************************************/
 
-static int
-loadCmd(Camera *camera, char *cmd)
+static size_t
+write_callback(char *contents, size_t size, size_t nmemb, void *userp)
+{
+	size_t realsize = size * nmemb;
+	size_t oldsize;
+	Em10MemoryBuffer *buffer = userp;
+
+	oldsize = buffer->size;
+	/* 1 additionally byte for 0x00 */
+	buffer->data = realloc(buffer->data, buffer->size + realsize + 1);
+	buffer->size += realsize;
+	buffer->data[buffer->size] = 0x00;
+
+	GP_LOG_DATA(contents, realsize, "lumix read from url");
+
+	memcpy(buffer->data + oldsize, contents, realsize);
+	return realsize;
+}
+
+static char *
+http_get(Camera *camera, char *cmd)
 {
 	CURL *curl;
 	CURLcode res;
 	char URL[100];
 	GPPortInfo info;
 	char *xpath;
+	Em10MemoryBuffer buffer;
 
 	curl = curl_easy_init();
 	gp_port_get_info(camera->port, &info);
@@ -245,32 +265,66 @@ loadCmd(Camera *camera, char *cmd)
 
 	curl_easy_setopt(curl, CURLOPT_URL, URL);
 
+	buffer.size = 0;
+	buffer.data = malloc(0);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
+
 	res = curl_easy_perform(curl);
 	if (res != CURLE_OK)
 	{
 		fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
 		return NULL;
 	}
+	else
+	{
+		GP_LOG_D("result %s\n", buffer.data);
+	}
 	curl_easy_cleanup(curl);
-	return GP_OK;
+	return buffer.data;
 }
 
 static int
 startCapture(Camera *camera)
 {
-	return loadCmd(camera, "exec_shutter.cgi?com=1st2ndpush");
+	return http_get(camera, "exec_shutter.cgi?com=1st2ndpush");
 }
 
 static int
 stopCapture(Camera *camera)
 {
-	return loadCmd(camera, "exec_shutter.cgi?com=2nd1strelease");
+	return http_get(camera, "exec_shutter.cgi?com=2nd1strelease");
 }
 
 static int
-switchToRecMode(Camera *camera)
+switch_to_shutter_mode(Camera *camera)
 {
-	return loadCmd(camera, "switch_cammode.cgi?mode=shutter");
+	return http_get(camera, "switch_cammode.cgi?mode=shutter");
+}
+
+static int
+switch_to_rec_mode(Camera *camera)
+{
+	return http_get(camera, "switch_cammode.cgi?mode=rec");
+}
+
+static int
+switch_to_play_mode(Camera *camera)
+{
+	return http_get(camera, "switch_cammode.cgi?mode=play");
+}
+
+static char* get_dsf_file_num(Camera *camera)
+{
+	switch_to_play_mode(camera);
+	char *temp = http_get(camera, "get_dcffilenum.cgi");
+	xmlDocPtr	doc = xmlParseDoc((unsigned char*) temp);
+	xmlNodePtr	cur = NULL;
+
+	// TODO - handle errors and unexpected responses
+
+	cur = xmlDocGetRootElement(doc);
+	return xmlNodeGetContent(cur);
 }
 
 /**
@@ -287,7 +341,7 @@ camera_capture(Camera *camera, CameraCaptureType type, CameraFilePath *path, GPC
 	int ret;
 	char *s, *url;
 
-	switchToRecMode(camera);
+	switch_to_shutter_mode(camera);
 
 	ret = startCapture(camera);
 	if (ret != GP_OK)
@@ -418,6 +472,7 @@ int camera_init(Camera *camera, GPContext *context)
 	int ret;
 	int tries;
 	char *result;
+	char *file_num;
 
 	camera->pl = calloc(sizeof(CameraPrivateLibrary), 1);
 
@@ -440,6 +495,10 @@ int camera_init(Camera *camera, GPContext *context)
 		return ret;
 	}
 	gp_filesystem_set_funcs(camera->fs, &fsfuncs, camera);
+
+	file_num = get_dsf_file_num(camera);
+	printf("Num of files: %s\n", file_num);
+
 
 	return GP_OK;
 }
