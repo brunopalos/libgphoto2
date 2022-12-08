@@ -68,12 +68,18 @@ typedef struct
 	size_t size;
 } Em10MemoryBuffer;
 
+typedef struct
+{
+	bool is_raw;
+	char *url;
+} Em10Picture;
+
 struct _CameraPrivateLibrary
 {
 	/* all private data */
-
 	int numpics;
 	int liveview;
+	Em10Picture *pics;
 };
 
 static int
@@ -314,17 +320,70 @@ switch_to_play_mode(Camera *camera)
 	return http_get(camera, "switch_cammode.cgi?mode=play");
 }
 
-static char* get_dsf_file_num(Camera *camera)
+static int get_dcf_file_num(Camera *camera)
 {
 	switch_to_play_mode(camera);
 	char *temp = http_get(camera, "get_dcffilenum.cgi");
-	xmlDocPtr	doc = xmlParseDoc((unsigned char*) temp);
-	xmlNodePtr	cur = NULL;
+	xmlDocPtr doc = xmlParseDoc((unsigned char *)temp);
+	xmlNodePtr cur = NULL;
 
 	// TODO - handle errors and unexpected responses
 
 	cur = xmlDocGetRootElement(doc);
-	return xmlNodeGetContent(cur);
+	xmlChar *str_file_num = xmlNodeGetContent(cur);
+	return (int)strtol((char *)str_file_num, NULL, 10);
+}
+
+static char *get_image_list(Camera *camera)
+{
+	// Set the number of files
+	int num_pics;
+
+	num_pics = get_dcf_file_num(camera);
+
+	if (camera->pl->numpics < num_pics)
+	{
+		camera->pl->pics = realloc(camera->pl->pics, num_pics * sizeof(camera->pl->pics[0]));
+		memset(camera->pl->pics + camera->pl->numpics, 0, (num_pics - camera->pl->numpics) * sizeof(camera->pl->pics[0]));
+		camera->pl->numpics = num_pics;
+	}
+
+	// TODO - discover olympus directories
+	char *response = http_get(camera, "get_imglist.cgi?DIR=/DCIM/100OLYMP");
+
+	int token_pos = 0;
+	int picture_pos = 0;
+	char *dir;
+
+	char *token = strtok(response, ", \n");
+	token = strtok(NULL, ", \n"); // skip version token
+	while (token != NULL)
+	{
+		if (token_pos == 6)
+		{
+			token_pos = 0;
+			picture_pos++;
+		}
+
+		if (token_pos == 0)
+			dir = token;
+		else if (token_pos == 1)
+		{
+			char *img_path = malloc(strlen(dir) + strlen(token) + 1);
+			strcpy(img_path, dir);
+			strcat(img_path, "/");
+			strcat(img_path, token);
+			camera->pl->pics[picture_pos].url = img_path;
+		}
+
+		token = strtok(NULL, ", \n");
+		token_pos++;
+	}
+	return;
+}
+
+void load_pictures(Camera *camera)
+{
 }
 
 /**
@@ -472,7 +531,7 @@ int camera_init(Camera *camera, GPContext *context)
 	int ret;
 	int tries;
 	char *result;
-	char *file_num;
+	int file_num;
 
 	camera->pl = calloc(sizeof(CameraPrivateLibrary), 1);
 
@@ -496,9 +555,14 @@ int camera_init(Camera *camera, GPContext *context)
 	}
 	gp_filesystem_set_funcs(camera->fs, &fsfuncs, camera);
 
-	file_num = get_dsf_file_num(camera);
-	printf("Num of files: %s\n", file_num);
+	file_num = get_dcf_file_num(camera);
+	printf("Num of files: %d\n", file_num);
+	get_image_list(camera);
 
+	for (int i = 0; i < camera->pl->numpics; i++)
+	{
+		printf("%s\n", camera->pl->pics[i].url);
+	}
 
 	return GP_OK;
 }
