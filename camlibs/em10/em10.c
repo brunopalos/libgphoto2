@@ -71,7 +71,8 @@ typedef struct
 typedef struct
 {
 	bool is_raw;
-	char *url;
+	char *dir_path;
+	char *pic_path;
 } Em10Picture;
 
 struct _CameraPrivateLibrary
@@ -182,12 +183,48 @@ set_info_func (CameraFilesystem *fs, const char *folder, const char *file,
 }
 #endif
 
+static bool
+is_subdir(const char *dir, const char *subdir) {
+    int dir_len = strlen(dir);
+    if (strncmp(dir, subdir, dir_len) != 0) {
+        return false;
+    }
+    return subdir[dir_len] == '/' && strchr(subdir + dir_len + 1, '/') == NULL;
+}
+
 static int
 folder_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
 				 void *data, GPContext *context)
 {
-	/*Camera *camera = data;*/
-	/* currently no folders exposed */
+	printf("folder_list_func:%s\n", folder);
+	Camera *camera = data;
+    // Iterate through all pictures in the library
+    for (int i = 0; i < camera->pl->numpics; i++) {
+        Em10Picture pic = camera->pl->pics[i];
+
+		char *subdir = strdup(pic.pic_path + 1);
+		//printf("Copied: %s\n", subdir);
+        char *subdir_end = strstr(subdir, folder);
+		//printf(": %s\n", subdir_end);
+        if (subdir_end) {
+			subdir_end = subdir_end + strlen(folder) - 1;
+            *subdir_end = '\0';
+        }
+		//printf("Subdir: %s\n", subdir);
+
+        // Check if the picture is in the current folder
+        if (gp_list_find_by_name(list, NULL, subdir) == GP_ERROR) {
+			printf("not found %s\n", subdir);
+            // Extract the folder name from the path
+            //char *folder_name = strrchr(pic.pic_path, '/') + 1;
+			//printf("%s\n, folder_name");
+
+            // Add the folder name to the list
+            gp_list_append(list, subdir, NULL);
+			printf("Added %s\n", subdir);
+        }
+    }
+
 	return GP_OK;
 }
 
@@ -200,6 +237,7 @@ static int
 file_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
 			   void *data, GPContext *context)
 {
+	printf("file_list_func\n");
 	return GP_OK;
 }
 
@@ -247,21 +285,21 @@ write_callback(char *contents, size_t size, size_t nmemb, void *userp)
 	buffer->size += realsize;
 	buffer->data[buffer->size] = 0x00;
 
-	GP_LOG_DATA(contents, realsize, "lumix read from url");
+	GP_LOG_DATA(contents, realsize, "em10 read from url");
 
 	memcpy(buffer->data + oldsize, contents, realsize);
 	return realsize;
 }
 
-static char *
-http_get(Camera *camera, char *cmd)
+static int
+http_get(Camera *camera, char *cmd, Em10MemoryBuffer *buffer)
 {
+	// TODO - handle errors
 	CURL *curl;
 	CURLcode res;
 	char URL[100];
 	GPPortInfo info;
 	char *xpath;
-	Em10MemoryBuffer buffer;
 
 	curl = curl_easy_init();
 	gp_port_get_info(camera->port, &info);
@@ -271,59 +309,72 @@ http_get(Camera *camera, char *cmd)
 
 	curl_easy_setopt(curl, CURLOPT_URL, URL);
 
-	buffer.size = 0;
-	buffer.data = malloc(0);
+	buffer->size = 0;
+	buffer->data = malloc(0);
+
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, buffer);
 
 	res = curl_easy_perform(curl);
 	if (res != CURLE_OK)
 	{
 		fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-		return NULL;
+		return GP_ERROR;
 	}
 	else
 	{
-		GP_LOG_D("result %s\n", buffer.data);
+		GP_LOG_D("result %s\n", buffer->data);
 	}
 	curl_easy_cleanup(curl);
-	return buffer.data;
+	return GP_OK;
+}
+
+static int
+http_command(Camera *camera, char *cmd)
+{
+	Em10MemoryBuffer *buffer = malloc(sizeof(Em10MemoryBuffer));
+	int ret = http_get(camera, "exec_shutter.cgi?com=1st2ndpush", buffer);
+	free(buffer);
+	return ret;
 }
 
 static int
 startCapture(Camera *camera)
 {
-	return http_get(camera, "exec_shutter.cgi?com=1st2ndpush");
+	return http_command(camera, "exec_shutter.cgi?com=1st2ndpush");
 }
 
 static int
 stopCapture(Camera *camera)
 {
-	return http_get(camera, "exec_shutter.cgi?com=2nd1strelease");
+	return http_command(camera, "exec_shutter.cgi?com=2nd1strelease");
 }
 
 static int
 switch_to_shutter_mode(Camera *camera)
 {
-	return http_get(camera, "switch_cammode.cgi?mode=shutter");
+	return http_command(camera, "switch_cammode.cgi?mode=shutter");
 }
 
 static int
 switch_to_rec_mode(Camera *camera)
 {
-	return http_get(camera, "switch_cammode.cgi?mode=rec");
+	return http_command(camera, "switch_cammode.cgi?mode=rec");
 }
 
 static int
 switch_to_play_mode(Camera *camera)
 {
-	return http_get(camera, "switch_cammode.cgi?mode=play");
+	return http_command(camera, "switch_cammode.cgi?mode=play");
 }
 
 static int get_dcf_file_num(Camera *camera)
 {
 	switch_to_play_mode(camera);
-	char *temp = http_get(camera, "get_dcffilenum.cgi");
+	Em10MemoryBuffer *buffer = malloc(sizeof(Em10MemoryBuffer));
+	// TODO - handle errors
+	http_get(camera, "get_dcffilenum.cgi", buffer);
+	char *temp = buffer->data;
 	xmlDocPtr doc = xmlParseDoc((unsigned char *)temp);
 	xmlNodePtr cur = NULL;
 
@@ -331,10 +382,12 @@ static int get_dcf_file_num(Camera *camera)
 
 	cur = xmlDocGetRootElement(doc);
 	xmlChar *str_file_num = xmlNodeGetContent(cur);
+
+	free(buffer);
 	return (int)strtol((char *)str_file_num, NULL, 10);
 }
 
-static char *get_image_list(Camera *camera)
+static void load_image_list(Camera *camera)
 {
 	// Set the number of files
 	int num_pics;
@@ -348,8 +401,10 @@ static char *get_image_list(Camera *camera)
 		camera->pl->numpics = num_pics;
 	}
 
-	// TODO - discover olympus directories
-	char *response = http_get(camera, "get_imglist.cgi?DIR=/DCIM/100OLYMP");
+	// TODO - discover olympus directories & handle errors
+	Em10MemoryBuffer *buffer = malloc(sizeof(Em10MemoryBuffer));
+	http_get(camera, "get_imglist.cgi?DIR=/DCIM/100OLYMP", buffer);
+	char *response = buffer->data;
 
 	int token_pos = 0;
 	int picture_pos = 0;
@@ -369,21 +424,19 @@ static char *get_image_list(Camera *camera)
 			dir = token;
 		else if (token_pos == 1)
 		{
-			char *img_path = malloc(strlen(dir) + strlen(token) + 1);
-			strcpy(img_path, dir);
-			strcat(img_path, "/");
-			strcat(img_path, token);
-			camera->pl->pics[picture_pos].url = img_path;
+			char *pic_path = malloc(strlen(dir) + strlen(token) + 1);
+			strcpy(pic_path, dir);
+			strcat(pic_path, "/");
+			strcat(pic_path, token);
+			camera->pl->pics[picture_pos].pic_path = pic_path;
+			camera->pl->pics[picture_pos].dir_path = dir;
 		}
 
 		token = strtok(NULL, ", \n");
 		token_pos++;
 	}
+	free(buffer);
 	return;
-}
-
-void load_pictures(Camera *camera)
-{
 }
 
 /**
@@ -478,7 +531,50 @@ int camera_about(Camera *camera, CameraText *about, GPContext *context)
 static int
 get_file_func(CameraFilesystem *fs, const char *folder, const char *filename, CameraFileType type, CameraFile *file, void *data, GPContext *context)
 {
-	return GP_OK;
+	printf("get_file_func\n");
+	Camera *camera = data;
+	int i;
+	CURLcode res;
+	CURL *imageUrl;
+	long http_response;
+	int ret_val = 0;
+	char url[100];
+
+	switch (type)
+	{
+	case GP_FILE_TYPE_PREVIEW:
+		strcat(url, "get_thumbnail.cgi?DIR=");
+		break;
+	case GP_FILE_TYPE_NORMAL:
+	default:
+		break;
+	}
+
+	for (i = 0; i < camera->pl->numpics; i++)
+	{
+		char *s;
+
+		if (camera->pl->pics[i].pic_path)
+		{
+			s = strrchr(camera->pl->pics[i].pic_path, '/') + 1;
+			if (!strcmp(s, filename))
+			{
+				strcat(url, camera->pl->pics[i].pic_path);
+				break;
+			}
+		}
+	}
+	if (i == camera->pl->numpics) /* not found */
+		return GP_ERROR;
+
+	printf("%s", url);
+
+	switch_to_play_mode(camera);
+
+	Em10MemoryBuffer *buffer = malloc(sizeof(Em10MemoryBuffer));
+	int ret = http_get(camera, "exec_shutter.cgi?com=1st2ndpush", buffer);
+	free(buffer);
+	return gp_file_set_data_and_size(file, buffer->data, buffer->size);
 }
 
 int camera_abilities(CameraAbilitiesList *list)
@@ -557,11 +653,11 @@ int camera_init(Camera *camera, GPContext *context)
 
 	file_num = get_dcf_file_num(camera);
 	printf("Num of files: %d\n", file_num);
-	get_image_list(camera);
+	load_image_list(camera);
 
 	for (int i = 0; i < camera->pl->numpics; i++)
 	{
-		printf("%s\n", camera->pl->pics[i].url);
+		printf("%s\n", camera->pl->pics[i].pic_path);
 	}
 
 	return GP_OK;
