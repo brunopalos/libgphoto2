@@ -184,46 +184,50 @@ set_info_func (CameraFilesystem *fs, const char *folder, const char *file,
 #endif
 
 static bool
-is_subdir(const char *dir, const char *subdir) {
-    int dir_len = strlen(dir);
-    if (strncmp(dir, subdir, dir_len) != 0) {
-        return false;
-    }
-    return subdir[dir_len] == '/' && strchr(subdir + dir_len + 1, '/') == NULL;
+is_subdir(const char *dir, const char *subdir)
+{
+	int dir_len = strlen(dir);
+	if (strncmp(dir, subdir, dir_len) != 0)
+	{
+		return false;
+	}
+	return subdir[dir_len] == '/' && strchr(subdir + dir_len + 1, '/') == NULL;
 }
 
 static int
 folder_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
 				 void *data, GPContext *context)
 {
-	printf("folder_list_func:%s\n", folder);
 	Camera *camera = data;
-    // Iterate through all pictures in the library
-    for (int i = 0; i < camera->pl->numpics; i++) {
-        Em10Picture pic = camera->pl->pics[i];
+	// Iterate through all pictures in the library
+	for (int i = 0; i < camera->pl->numpics; i++)
+	{
+		Em10Picture pic = camera->pl->pics[i];
 
-		char *subdir = strdup(pic.pic_path + 1);
-		//printf("Copied: %s\n", subdir);
-        char *subdir_end = strstr(subdir, folder);
-		//printf(": %s\n", subdir_end);
-        if (subdir_end) {
-			subdir_end = subdir_end + strlen(folder) - 1;
-            *subdir_end = '\0';
-        }
-		//printf("Subdir: %s\n", subdir);
+		int offset = 1;
+		int len = strlen(folder);
+		if (folder[len - 1] == '/')
+		{
+			offset = 0;
+		}
+		char *subdir = strdup(pic.pic_path + strlen(folder) + offset);
+		char *subdir_end = strchr(subdir, '/');
+		if (subdir_end)
+		{
+			subdir_end = subdir_end;
+			*subdir_end = '\0';
 
-        // Check if the picture is in the current folder
-        if (gp_list_find_by_name(list, NULL, subdir) == GP_ERROR) {
-			printf("not found %s\n", subdir);
-            // Extract the folder name from the path
-            //char *folder_name = strrchr(pic.pic_path, '/') + 1;
-			//printf("%s\n, folder_name");
-
-            // Add the folder name to the list
-            gp_list_append(list, subdir, NULL);
-			printf("Added %s\n", subdir);
-        }
-    }
+			if (strlen(subdir) > 0)
+			{
+				// Check if the picture is in the current folder
+				if (gp_list_find_by_name(list, NULL, subdir) == GP_ERROR)
+				{
+					// Add the folder name to the list
+					gp_list_append(list, subdir, NULL);
+				}
+			}
+		}
+	}
 
 	return GP_OK;
 }
@@ -237,7 +241,16 @@ static int
 file_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
 			   void *data, GPContext *context)
 {
-	printf("file_list_func\n");
+	Camera *camera = data;
+	int	i;
+
+	for (i=0;i<camera->pl->numpics;i++) {
+		if (camera->pl->pics[i].pic_path) {
+			char	*s = strrchr(camera->pl->pics[i].pic_path, '/')+1;
+			gp_list_append (list, s, NULL);
+			continue;
+		}
+	}
 	return GP_OK;
 }
 
@@ -333,7 +346,7 @@ static int
 http_command(Camera *camera, char *cmd)
 {
 	Em10MemoryBuffer *buffer = malloc(sizeof(Em10MemoryBuffer));
-	int ret = http_get(camera, "exec_shutter.cgi?com=1st2ndpush", buffer);
+	int ret = http_get(camera, cmd, buffer);
 	free(buffer);
 	return ret;
 }
@@ -567,12 +580,12 @@ get_file_func(CameraFilesystem *fs, const char *folder, const char *filename, Ca
 	if (i == camera->pl->numpics) /* not found */
 		return GP_ERROR;
 
-	printf("%s", url);
+	printf("File: %s\n", url);
 
 	switch_to_play_mode(camera);
 
 	Em10MemoryBuffer *buffer = malloc(sizeof(Em10MemoryBuffer));
-	int ret = http_get(camera, "exec_shutter.cgi?com=1st2ndpush", buffer);
+	int ret = http_get(camera, url, buffer);
 	free(buffer);
 	return gp_file_set_data_and_size(file, buffer->data, buffer->size);
 }
