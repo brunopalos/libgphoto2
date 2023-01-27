@@ -242,12 +242,14 @@ file_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
 			   void *data, GPContext *context)
 {
 	Camera *camera = data;
-	int	i;
+	int i;
 
-	for (i=0;i<camera->pl->numpics;i++) {
-		if (camera->pl->pics[i].pic_path) {
-			char	*s = strrchr(camera->pl->pics[i].pic_path, '/')+1;
-			gp_list_append (list, s, NULL);
+	for (i = 0; i < camera->pl->numpics; i++)
+	{
+		if (camera->pl->pics[i].pic_path)
+		{
+			char *s = strrchr(camera->pl->pics[i].pic_path, '/') + 1;
+			gp_list_append(list, s, NULL);
 			continue;
 		}
 	}
@@ -336,7 +338,7 @@ http_get(Camera *camera, char *cmd, Em10MemoryBuffer *buffer)
 	}
 	else
 	{
-		GP_LOG_D("result %s\n", buffer->data);
+		GP_LOG_D("result was get size: %d\n", buffer->size);
 	}
 	curl_easy_cleanup(curl);
 	return GP_OK;
@@ -544,7 +546,6 @@ int camera_about(Camera *camera, CameraText *about, GPContext *context)
 static int
 get_file_func(CameraFilesystem *fs, const char *folder, const char *filename, CameraFileType type, CameraFile *file, void *data, GPContext *context)
 {
-	printf("get_file_func\n");
 	Camera *camera = data;
 	int i;
 	CURLcode res;
@@ -559,6 +560,8 @@ get_file_func(CameraFilesystem *fs, const char *folder, const char *filename, Ca
 		strcat(url, "get_thumbnail.cgi?DIR=");
 		break;
 	case GP_FILE_TYPE_NORMAL:
+		gp_file_set_mime_type(file, GP_MIME_JPEG);
+		break;
 	default:
 		break;
 	}
@@ -580,14 +583,26 @@ get_file_func(CameraFilesystem *fs, const char *folder, const char *filename, Ca
 	if (i == camera->pl->numpics) /* not found */
 		return GP_ERROR;
 
-	printf("File: %s\n", url);
-
 	switch_to_play_mode(camera);
 
 	Em10MemoryBuffer *buffer = malloc(sizeof(Em10MemoryBuffer));
 	int ret = http_get(camera, url, buffer);
+	int data_set_ret = gp_file_set_data_and_size(file, buffer->data, buffer->size);
+
 	free(buffer);
-	return gp_file_set_data_and_size(file, buffer->data, buffer->size);
+	return data_set_ret;
+}
+
+static int
+camera_config_get (Camera *camera, CameraWidget **window, GPContext *context)
+{
+	return GP_OK;
+}
+
+static int
+camera_config_set (Camera *camera, CameraWidget *window, GPContext *context)
+{
+	return GP_OK;
 }
 
 int camera_abilities(CameraAbilitiesList *list)
@@ -646,6 +661,8 @@ int camera_init(Camera *camera, GPContext *context)
 
 	/* First, set up all the function pointers */
 	camera->functions->exit = camera_exit;
+	camera->functions->get_config = camera_config_get;
+	camera->functions->set_config = camera_config_set;
 	camera->functions->capture = camera_capture;
 	camera->functions->capture_preview = camera_capture_preview;
 	camera->functions->summary = camera_summary;
@@ -665,14 +682,7 @@ int camera_init(Camera *camera, GPContext *context)
 	gp_filesystem_set_funcs(camera->fs, &fsfuncs, camera);
 
 	file_num = get_dcf_file_num(camera);
-	printf("Num of files: %d\n", file_num);
 	load_image_list(camera);
-
-	for (int i = 0; i < camera->pl->numpics; i++)
-	{
-		printf("%s\n", camera->pl->pics[i].pic_path);
-	}
-
 	return GP_OK;
 }
 
