@@ -596,6 +596,69 @@ get_file_func(CameraFilesystem *fs, const char *folder, const char *filename, Ca
 static int
 camera_config_get (Camera *camera, CameraWidget **window, GPContext *context)
 {
+	printf("camera_config_get\n");
+    CameraWidget	*widget,*section;
+
+	switch_to_rec_mode(camera);
+
+	gp_widget_new (GP_WIDGET_WINDOW, _("EM-10 Configuration"), window);
+    gp_widget_set_name (*window, "config");
+
+	gp_widget_new (GP_WIDGET_SECTION, _("Camera Settings"), &section);
+	gp_widget_set_name (section, "settings");
+	gp_widget_append (*window, section);
+
+	gp_widget_new (GP_WIDGET_RADIO, _("Shutterspeed"), &widget);
+	gp_widget_set_name (widget, "shutterspeed");
+
+	gp_widget_add_choice (widget, "200");
+	gp_widget_add_choice (widget, "250");
+	gp_widget_set_value (widget, "250");
+	gp_widget_append (section, widget);
+
+	Em10MemoryBuffer *buffer = malloc(sizeof(Em10MemoryBuffer));
+	// TODO - handle errors
+	http_get(camera, "get_camprop.cgi?com=desc&propname=desclist", buffer);
+	char *temp = buffer->data;
+	xmlDocPtr doc = xmlParseDoc((unsigned char *)temp);
+	xmlNodePtr cur = NULL;
+
+	// TODO - handle errors and unexpected responses
+
+	cur = xmlDocGetRootElement(doc);
+	xmlNodePtr next_property = xmlFirstElementChild (cur);
+
+	while (next_property != NULL)
+	{
+		
+		// propname element
+		xmlNode *property = next_property->children;
+		xmlChar *property_content = xmlNodeGetContent(property);
+		printf("%s\n", (char *)property_content);
+
+		// attribute element
+		xmlNode *attribute = property->next;
+
+		// value element
+		xmlNode *value = attribute->next;
+		xmlChar *value_content = xmlNodeGetContent(value);
+		printf("%s\n", (char *)value_content);
+
+		// enum element
+		xmlNode *property_enum = value->next;
+		if (property_enum != NULL) {
+			xmlChar *property_enum_content = xmlNodeGetContent(property_enum);
+			printf("%s\n", (char *)property_enum_content);
+		}
+
+		next_property = next_property->next;
+	}
+
+	printf("end\n");
+	
+
+	free(buffer);
+
 	return GP_OK;
 }
 
