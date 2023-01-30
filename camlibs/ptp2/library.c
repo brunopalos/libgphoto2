@@ -2500,6 +2500,8 @@ static struct {
 	{"Canon:EOS M50m2",			0x04a9, 0x32f9, PTP_CAP|PTP_CAP_PREVIEW},
 	/* Ingmar Rieger via email */
 	{"Canon:EOS R5 C",			0x04a9, 0x3303, PTP_CAP|PTP_CAP_PREVIEW},
+	/* https://github.com/gphoto/libgphoto2/issues/881 */
+	{"Canon:EOS R6m2",			0x04a9, 0x330b, PTP_CAP|PTP_CAP_PREVIEW},
 
 	/* Konica-Minolta PTP cameras */
 	{"Konica-Minolta:DiMAGE A2 (PTP mode)",        0x132b, 0x0001, 0},
@@ -2752,6 +2754,8 @@ static struct {
 
 	/* 522903503@qq.com */
 	{"Sigma:fp",				0x1003,	0xc432, PTP_CAP|PTP_CAP_PREVIEW},
+	/* https://github.com/gphoto/libgphoto2/issues/882 */
+	{"Sigma:fp L",				0x1003,	0xc442, PTP_CAP|PTP_CAP_PREVIEW},
 
 	/* Bernhard Wagner <me@bernhardwagner.net> */
 	{"Leica:M9",				0x1a98,	0x0002, PTP_CAP},
@@ -3233,7 +3237,7 @@ exitfailed:
 				(camera->port, GP_PORT_USB_ENDPOINT_INT);
 	}
 #if defined(HAVE_LIBWS232) && defined(WIN32)
-	else if ((camera->port!=NULL) && camera->port->type != GP_PORT_PTPIP) {
+	else if ((camera->port!=NULL) && (camera->port->type == GP_PORT_PTPIP)) {
 		WSACleanup();
 	}
 #endif
@@ -5911,7 +5915,8 @@ camera_trigger_canon_eos_capture (Camera *camera, GPContext *context)
 	if (ptp_operation_issupported(params, PTP_OC_CANON_EOS_RemoteReleaseOn)) {
 		if (!is_canon_eos_m (params)) {
 			/* Regular EOS */
-			int 			manualfocus = 0, foundfocusinfo = 0;
+			uint16_t	res;
+			int 		manualfocus = 0, foundfocusinfo = 0;
 
 			/* are we in manual focus mode ... value would be 3 */
 			if (PTP_RC_OK == ptp_canon_eos_getdevicepropdesc (params, PTP_DPC_CANON_EOS_FocusMode, &dpd)) {
@@ -5972,7 +5977,16 @@ camera_trigger_canon_eos_capture (Camera *camera, GPContext *context)
 			}
 			/* full press now */
 
-			C_PTP_REP_MSG (ptp_canon_eos_remotereleaseon (params, 2, 0), _("Canon EOS Full-Press failed"));
+			res = LOG_ON_PTP_E (ptp_canon_eos_remotereleaseon (params, 2, 0));
+			if (res != PTP_RC_OK) {
+				/* if the Full Press failed, try to roll back the release and do not exit Half-Pressed. */
+				ptp_check_eos_events (params);
+				C_PTP_REP_MSG (ptp_canon_eos_remotereleaseoff (params, 1), _("Canon EOS Half-Release failed"));
+				ptp_check_eos_events (params);
+				C_PTP_REP_MSG (res, _("Canon EOS Full-Press failed"));
+				/* safety, should not arrive here */
+				return GP_ERROR;
+			}
 			/* no event check between */
 			/* full release now */
 			C_PTP_REP_MSG (ptp_canon_eos_remotereleaseoff (params, 2), _("Canon EOS Full-Release failed"));

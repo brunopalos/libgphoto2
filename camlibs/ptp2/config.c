@@ -5281,11 +5281,24 @@ _put_Sony_ShutterSpeed(CONFIG_PUT_ARGS) {
 				break;
 		}
 
-		// Calculating jump width
-		if (direction > 0)
-			value.u8 = 0x00 + position_new - position_current;
-		else
-			value.u8 = 0x100 + position_new - position_current;
+		/* If something failed, fall back to single step, https://github.com/gphoto/libgphoto2/issues/694 */
+		if (position_current == position_new) {
+			GP_LOG_D ("posNew and pos_current both %d, fall back to single step", position_current);
+			if (old > new) {
+				value.u8 = 0x01;
+				direction = 1;
+			}
+			else {
+				value.u8 = 0xff;
+				direction = -1;
+			}
+		} else {
+			// Calculating jump width
+			if (direction > 0)
+				value.u8 = 0x00 + position_new - position_current;
+			else
+				value.u8 = 0x100 + position_new - position_current;
+		}
 
 		a = dpd->CurrentValue.u32>>16;
 		b = dpd->CurrentValue.u32&0xffff;
@@ -8787,6 +8800,32 @@ _put_Sony_Bulb(CONFIG_PUT_ARGS)
 }
 
 static int
+_get_Sony_FocusMagnifyProp(CONFIG_GET_ARGS) {
+	int val;
+
+	gp_widget_new (GP_WIDGET_TOGGLE, _(menu->label), widget);
+	gp_widget_set_name (*widget,menu->name);
+	val = 2; /* always changed */
+	gp_widget_set_value  (*widget, &val);
+	return GP_OK;
+}
+
+static int
+_put_Sony_FocusMagnifyProp(CONFIG_PUT_ARGS)
+{
+	PTPParams *params = &(camera->pl->params);
+	int val;
+	PTPPropertyValue xpropval;
+
+	CR (gp_widget_get_value(widget, &val));
+	xpropval.u16 = val ? 2 : 1;
+
+	C_PTP (ptp_sony_setdevicecontrolvalueb (params, dpd->DevicePropertyCode, &xpropval, PTP_DTC_UINT16));
+
+	return GP_OK;
+}
+
+static int
 _get_Panasonic_Movie(CONFIG_GET_ARGS) {
 	int val;
 
@@ -10528,6 +10567,12 @@ static struct submenu camera_actions_menu[] = {
 	{ N_("Movie Capture"),                  "movie",            0,  PTP_VENDOR_SONY,    PTP_OC_SONY_QX_Connect,             _get_Sony_QX_Movie,             _put_Sony_QX_Movie },
 	{ N_("Movie Capture"),                  "movie",            0,  PTP_VENDOR_PANASONIC,PTP_OC_PANASONIC_MovieRecControl,  _get_Panasonic_Movie,           _put_Panasonic_Movie },
 	{ N_("Movie Mode"),                     "eosmoviemode",     0,  PTP_VENDOR_CANON,   0,                                  _get_Canon_EOS_MovieModeSw,     _put_Canon_EOS_MovieModeSw },
+	{ N_("Focus Magnify"),                  "focusmagnify",     PTP_DPC_SONY_FocusMagnify, PTP_VENDOR_SONY, PTP_DTC_UINT16, _get_Sony_FocusMagnifyProp,     _put_Sony_FocusMagnifyProp },
+	{ N_("Focus Magnify Exit"),             "focusmagnifyexit", PTP_DPC_SONY_FocusMagnifyExit, PTP_VENDOR_SONY, PTP_DTC_UINT16, _get_Sony_FocusMagnifyProp, _put_Sony_FocusMagnifyProp },
+	{ N_("Focus Magnify Up"),               "focusmagnifyup",   PTP_DPC_SONY_FocusMagnifyUp, PTP_VENDOR_SONY, PTP_DTC_UINT16, _get_Sony_FocusMagnifyProp,   _put_Sony_FocusMagnifyProp },
+	{ N_("Focus Magnify Down"),             "focusmagnifydown", PTP_DPC_SONY_FocusMagnifyDown, PTP_VENDOR_SONY, PTP_DTC_UINT16, _get_Sony_FocusMagnifyProp, _put_Sony_FocusMagnifyProp },
+	{ N_("Focus Magnify Left"),             "focusmagnifyleft", PTP_DPC_SONY_FocusMagnifyLeft, PTP_VENDOR_SONY, PTP_DTC_UINT16, _get_Sony_FocusMagnifyProp, _put_Sony_FocusMagnifyProp },
+	{ N_("Focus Magnify Right"),            "focusmagnifyright",PTP_DPC_SONY_FocusMagnifyRight, PTP_VENDOR_SONY, PTP_DTC_UINT16, _get_Sony_FocusMagnifyProp,_put_Sony_FocusMagnifyProp },
 	{ N_("PTP Opcode"),                     "opcode",           0,  0,                  PTP_OC_GetDeviceInfo,               _get_Generic_OPCode,            _put_Generic_OPCode },
 	{ 0,0,0,0,0,0,0 },
 };
