@@ -345,6 +345,44 @@ http_get(Camera *camera, char *cmd, Em10MemoryBuffer *buffer)
 }
 
 static int
+http_post(Camera *camera, char *cmd, char *post_body)
+{
+	// TODO - handle errors
+	CURL *curl;
+	CURLcode res;
+	char URL[100];
+	GPPortInfo info;
+	char *xpath;
+	Em10MemoryBuffer lmb;
+
+	curl = curl_easy_init();
+	gp_port_get_info(camera->port, &info);
+	gp_port_info_get_path(info, &xpath); /* xpath now contains ip:192.168.1.1 */
+	snprintf(URL, 100, "http://%s/%s", xpath + strlen("ip:"), cmd);
+	GP_LOG_D("cam url is %s", URL);
+
+	curl_easy_setopt(curl, CURLOPT_URL, URL);
+	curl_easy_setopt(curl, CURLOPT_POST, 1);
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(post_body));
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_body);
+
+	GP_LOG_D("posting %s", post_body);
+
+	res = curl_easy_perform(curl);
+	if (res != CURLE_OK)
+	{
+		fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+		return GP_ERROR;
+	}
+	else
+	{
+		GP_LOG_D("post successful\n");
+	}
+	curl_easy_cleanup(curl);
+	return GP_OK;
+}
+
+static int
 http_command(Camera *camera, char *cmd)
 {
 	Em10MemoryBuffer *buffer = malloc(sizeof(Em10MemoryBuffer));
@@ -524,7 +562,7 @@ int camera_about(Camera *camera, CameraText *about, GPContext *context)
 	strcpy(about->text, _("Olympus E-M10 WiFi Library\n"
 						  "Bruno Palos <brunopalos@gmail.com>\n"
 						  "Connects to Olympus E-M10 Cameras over Wifi.\n"
-						  "using the HTTP GET commands."));
+						  "using the HTTP commands."));
 	return GP_OK;
 }
 
@@ -646,7 +684,9 @@ camera_config_get(Camera *camera, CameraWidget **window, GPContext *context)
 				gp_widget_add_choice(widget, choice);
 				choice = strtok(NULL, " ");
 			}
-		} else {
+		}
+		else
+		{
 			gp_widget_new(GP_WIDGET_TEXT, _(property_name), &widget);
 		}
 		gp_widget_set_name(widget, property_name);
@@ -664,6 +704,36 @@ camera_config_get(Camera *camera, CameraWidget **window, GPContext *context)
 static int
 camera_config_set(Camera *camera, CameraWidget *window, GPContext *context)
 {
+	int ret;
+	CameraWidget *settings;
+
+	gp_widget_get_child(window, 0, &settings);
+
+	int widgets_count = gp_widget_count_children(settings);
+
+	for (int i = 0; i < widgets_count; i++)
+	{
+		char **widget_label;
+		CameraWidget *widget;
+
+		gp_widget_get_child(settings, i, &widget);
+		gp_widget_get_label(widget, &widget_label);
+
+		if ((GP_OK == gp_widget_get_child_by_label(window, widget_label, &widget)) && gp_widget_changed(widget))
+		{
+			char *value;
+			char cmd[50];
+			char http_body[150];
+
+			if (GP_OK != (ret = gp_widget_get_value(widget, &value)))
+				return ret;
+			snprintf(cmd, 50, "set_camprop.cgi?com=set&propname=%s", widget_label);
+			snprintf(http_body, 150, "<set><value>%s</value></set>", value);
+
+			http_post(camera, cmd, http_body);
+		}
+	}
+
 	return GP_OK;
 }
 
