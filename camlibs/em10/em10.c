@@ -392,13 +392,13 @@ http_command(Camera *camera, char *cmd)
 }
 
 static int
-startCapture(Camera *camera)
+start_capture(Camera *camera)
 {
 	return http_command(camera, "exec_shutter.cgi?com=1st2ndpush");
 }
 
 static int
-stopCapture(Camera *camera)
+stop_capture(Camera *camera)
 {
 	return http_command(camera, "exec_shutter.cgi?com=2nd1strelease");
 }
@@ -508,11 +508,11 @@ camera_capture(Camera *camera, CameraCaptureType type, CameraFilePath *path, GPC
 
 	switch_to_shutter_mode(camera);
 
-	ret = startCapture(camera);
+	ret = start_capture(camera);
 	if (ret != GP_OK)
 		return ret;
 
-	stopCapture(camera);
+	stop_capture(camera);
 
 	printf("Captured\n");
 
@@ -584,6 +584,8 @@ int camera_about(Camera *camera, CameraText *about, GPContext *context)
 static int
 get_file_func(CameraFilesystem *fs, const char *folder, const char *filename, CameraFileType type, CameraFile *file, void *data, GPContext *context)
 {
+
+	printf("BAAAAA");
 	Camera *camera = data;
 	int i;
 	CURLcode res;
@@ -696,11 +698,10 @@ camera_config_get(Camera *camera, CameraWidget **window, GPContext *context)
 		next_property = next_property->next;
 	}
 
-	int valset = 2;
-	gp_widget_new (GP_WIDGET_TOGGLE, _("Bulb"), &widget);
-	gp_widget_set_name (widget, "bulb");
-	gp_widget_set_value (widget, &valset);
-	gp_widget_append (section, widget);
+	gp_widget_new(GP_WIDGET_TOGGLE, _("Bulb"), &widget);
+	gp_widget_set_name(widget, "bulb");
+	gp_widget_set_value(widget, FALSE);
+	gp_widget_append(section, widget);
 
 	free(buffer);
 
@@ -710,6 +711,7 @@ camera_config_get(Camera *camera, CameraWidget **window, GPContext *context)
 static int
 camera_config_set(Camera *camera, CameraWidget *window, GPContext *context)
 {
+	printf("OHOHOHOHO");
 	int ret;
 	CameraWidget *settings;
 
@@ -725,7 +727,26 @@ camera_config_set(Camera *camera, CameraWidget *window, GPContext *context)
 		gp_widget_get_child(settings, i, &widget);
 		gp_widget_get_label(widget, &widget_label);
 
-		if ((GP_OK == gp_widget_get_child_by_label(window, widget_label, &widget)) && gp_widget_changed(widget))
+		if (GP_OK == gp_widget_get_child_by_name(window, "bulb", &widget) && gp_widget_changed(widget))
+		{
+			int val;
+
+			if (GP_OK != (ret = gp_widget_get_value(widget, &val)))
+				return ret;
+
+			if (val)
+			{
+				switch_to_shutter_mode(camera);
+				ret = start_capture(camera);
+				if (ret != GP_OK)
+					return ret;
+			}
+			else
+			{
+				stop_capture(camera);
+			}
+		}
+		else if ((GP_OK == gp_widget_get_child_by_label(window, widget_label, &widget)) && gp_widget_changed(widget))
 		{
 			char *value;
 			char cmd[50];
