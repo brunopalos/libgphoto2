@@ -446,6 +446,8 @@ gp_abilities_list_detect (CameraAbilitiesList *list,
 			  GPPortInfoList *info_list, CameraList *l,
 			  GPContext *context)
 {
+
+	printf("gp_abilities_list_detect");
 	GPPortInfo info;
 	GPPort *port;
 	int i, info_count;
@@ -501,14 +503,14 @@ gp_abilities_list_detect (CameraAbilitiesList *list,
 			gp_list_append (l, "Mass Storage Camera", xpath);
 			break;
 		}
-		case GP_PORT_PTPIP: {
+		case GP_PORT_IP: {
 			char	*s;
 
 			s = strchr (xpath, ':');
 			if (!s) break;
 			s++;
 			if (!strlen(s)) break;
-			gp_list_append (l, "PTP/IP Camera", xpath);
+			gp_list_append (l, "Olympus E-M10", xpath);
 			break;
 		}
 		default:

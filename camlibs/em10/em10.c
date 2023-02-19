@@ -696,6 +696,12 @@ camera_config_get(Camera *camera, CameraWidget **window, GPContext *context)
 		next_property = next_property->next;
 	}
 
+	int valset = 2;
+	gp_widget_new (GP_WIDGET_TOGGLE, _("Bulb"), &widget);
+	gp_widget_set_name (widget, "bulb");
+	gp_widget_set_value (widget, &valset);
+	gp_widget_append (section, widget);
+
 	free(buffer);
 
 	return GP_OK;
@@ -739,6 +745,7 @@ camera_config_set(Camera *camera, CameraWidget *window, GPContext *context)
 
 int camera_abilities(CameraAbilitiesList *list)
 {
+	printf("camera_abilities");
 	CameraAbilities a;
 
 	memset(&a, 0, sizeof(a));
