@@ -71,6 +71,7 @@ typedef struct
 typedef struct
 {
 	bool is_raw;
+	char *name;
 	char *dir_path;
 	char *pic_path;
 } Em10Picture;
@@ -192,68 +193,6 @@ is_subdir(const char *dir, const char *subdir)
 		return false;
 	}
 	return subdir[dir_len] == '/' && strchr(subdir + dir_len + 1, '/') == NULL;
-}
-
-static int
-folder_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
-				 void *data, GPContext *context)
-{
-	Camera *camera = data;
-	// Iterate through all pictures in the library
-	for (int i = 0; i < camera->pl->numpics; i++)
-	{
-		Em10Picture pic = camera->pl->pics[i];
-
-		int offset = 1;
-		int len = strlen(folder);
-		if (folder[len - 1] == '/')
-		{
-			offset = 0;
-		}
-		char *subdir = strdup(pic.pic_path + strlen(folder) + offset);
-		char *subdir_end = strchr(subdir, '/');
-		if (subdir_end)
-		{
-			subdir_end = subdir_end;
-			*subdir_end = '\0';
-
-			if (strlen(subdir) > 0)
-			{
-				// Check if the picture is in the current folder
-				if (gp_list_find_by_name(list, NULL, subdir) == GP_ERROR)
-				{
-					// Add the folder name to the list
-					gp_list_append(list, subdir, NULL);
-				}
-			}
-		}
-	}
-
-	return GP_OK;
-}
-
-/**
- * List available files in the specified folder.
- *
- * This function is a CameraFilesystem method.
- */
-static int
-file_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
-			   void *data, GPContext *context)
-{
-	Camera *camera = data;
-	int i;
-
-	for (i = 0; i < camera->pl->numpics; i++)
-	{
-		if (camera->pl->pics[i].pic_path)
-		{
-			char *s = strrchr(camera->pl->pics[i].pic_path, '/') + 1;
-			gp_list_append(list, s, NULL);
-			continue;
-		}
-	}
-	return GP_OK;
 }
 
 /**
@@ -421,6 +360,7 @@ switch_to_play_mode(Camera *camera)
 	return http_command(camera, "switch_cammode.cgi?mode=play");
 }
 
+
 static int get_dcf_file_num(Camera *camera)
 {
 	switch_to_play_mode(camera);
@@ -483,6 +423,7 @@ static void load_image_list(Camera *camera)
 			strcat(pic_path, token);
 			camera->pl->pics[picture_pos].pic_path = pic_path;
 			camera->pl->pics[picture_pos].dir_path = dir;
+			camera->pl->pics[picture_pos].name = token;
 		}
 
 		token = strtok(NULL, ", \n");
@@ -490,6 +431,76 @@ static void load_image_list(Camera *camera)
 	}
 	free(buffer);
 	return;
+}
+
+static int
+folder_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
+				 void *data, GPContext *context)
+{
+	Camera *camera = data;
+	load_image_list(camera);
+
+	// Iterate through all pictures in the library
+	for (int i = 0; i < camera->pl->numpics; i++)
+	{
+		Em10Picture pic = camera->pl->pics[i];
+
+		int offset = 1;
+		int len = strlen(folder);
+		if (folder[len - 1] == '/')
+		{
+			offset = 0;
+		}
+		char *subdir = strdup(pic.pic_path + strlen(folder) + offset);
+		char *subdir_end = strchr(subdir, '/');
+		if (subdir_end)
+		{
+			subdir_end = subdir_end;
+			*subdir_end = '\0';
+
+			if (strlen(subdir) > 0)
+			{
+				// Check if the picture is in the current folder
+				if (gp_list_find_by_name(list, NULL, subdir) == GP_ERROR)
+				{
+					// Add the folder name to the list
+					gp_list_append(list, subdir, NULL);
+				}
+			}
+		}
+	}
+
+	return GP_OK;
+}
+
+/**
+ * List available files in the specified folder.
+ *
+ * This function is a CameraFilesystem method.
+ */
+static int
+file_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
+			   void *data, GPContext *context)
+{
+	Camera *camera = data;
+	int i;
+
+	load_image_list(camera);
+
+	for (i = 0; i < camera->pl->numpics; i++)
+	{
+		char tmp[100];
+		char *filename = strrchr(camera->pl->pics[i].pic_path, '/') + 1;
+		strcpy(tmp, folder);
+		strcat(tmp, "/");
+		strcat(tmp, filename);
+		if (!strcmp(tmp, camera->pl->pics[i].pic_path))
+		{
+			gp_list_append(list, camera->pl->pics[i].pic_path, NULL);
+			continue;
+		}
+	}
+	return GP_OK;
 }
 
 /**
@@ -519,9 +530,10 @@ camera_capture(Camera *camera, CameraCaptureType type, CameraFilePath *path, GPC
 	if (ret < GP_OK)
 		return ret;
 
-	// s = strrchr(url,'/')+1;
-	// strcpy(path->name, s);
-	// strcpy(path->folder, "/");
+	int num_pics = get_dcf_file_num(camera);
+	load_image_list(camera);
+	strcpy(path->folder, camera->pl->pics[num_pics - 1].dir_path);
+	strcpy(path->name, camera->pl->pics[num_pics - 1].name);
 
 	return GP_OK;
 }
@@ -566,6 +578,47 @@ int camera_about(Camera *camera, CameraText *about, GPContext *context)
 	return GP_OK;
 }
 
+static int
+_timeout_passed(struct timeval *start, int timeout) {
+	struct timeval curtime;
+
+	gettimeofday (&curtime, NULL);
+	return ((curtime.tv_sec - start->tv_sec)*1000)+((curtime.tv_usec - start->tv_usec)/1000) >= timeout;
+}
+
+static int
+camera_wait_for_event(Camera *camera, int timeout, CameraEventType *eventtype, void **eventdata, GPContext *context)
+{
+	struct timeval event_start;
+	CameraFilePath *path;
+
+	*eventtype = GP_EVENT_TIMEOUT;
+	*eventdata = NULL;
+
+	gettimeofday(&event_start, 0);
+	while (1)
+	{
+		path = malloc(sizeof(CameraFilePath));
+		int num_pics = get_dcf_file_num(camera);
+		if (num_pics > camera->pl->numpics)
+		{
+			load_image_list(camera);
+			strcpy(path->folder, camera->pl->pics[num_pics - 1].dir_path);
+			strcpy(path->name, camera->pl->pics[num_pics - 1].name);
+			*eventtype = GP_EVENT_FILE_ADDED;
+			*eventdata = path;
+			return GP_OK;
+		}
+
+		free(path);
+
+		if (_timeout_passed (&event_start, timeout))
+			break;
+		usleep(1000*1000); /* 100 ms */
+	}
+	return GP_OK;
+}
+
 /*@}*/
 
 /**********************************************************************/
@@ -584,8 +637,6 @@ int camera_about(Camera *camera, CameraText *about, GPContext *context)
 static int
 get_file_func(CameraFilesystem *fs, const char *folder, const char *filename, CameraFileType type, CameraFile *file, void *data, GPContext *context)
 {
-
-	printf("BAAAAA");
 	Camera *camera = data;
 	int i;
 	CURLcode res;
@@ -594,13 +645,16 @@ get_file_func(CameraFilesystem *fs, const char *folder, const char *filename, Ca
 	int ret_val = 0;
 	char url[100];
 
+	load_image_list(camera);
+
 	switch (type)
 	{
 	case GP_FILE_TYPE_PREVIEW:
-		strcat(url, "get_thumbnail.cgi?DIR=");
+		strcpy(url, "get_thumbnail.cgi?DIR=");
 		break;
 	case GP_FILE_TYPE_NORMAL:
 		gp_file_set_mime_type(file, GP_MIME_JPEG);
+		strcpy(url, "");
 		break;
 	default:
 		break;
@@ -615,6 +669,8 @@ get_file_func(CameraFilesystem *fs, const char *folder, const char *filename, Ca
 			s = strrchr(camera->pl->pics[i].pic_path, '/') + 1;
 			if (!strcmp(s, filename))
 			{
+				GP_LOG_D("cmd is %s", camera->pl->pics[i].pic_path);
+				GP_LOG_D("url is %s", url);
 				strcat(url, camera->pl->pics[i].pic_path);
 				break;
 			}
@@ -711,7 +767,6 @@ camera_config_get(Camera *camera, CameraWidget **window, GPContext *context)
 static int
 camera_config_set(Camera *camera, CameraWidget *window, GPContext *context)
 {
-	printf("OHOHOHOHO");
 	int ret;
 	CameraWidget *settings;
 
@@ -828,6 +883,7 @@ int camera_init(Camera *camera, GPContext *context)
 	camera->functions->summary = camera_summary;
 	camera->functions->manual = camera_manual;
 	camera->functions->about = camera_about;
+	camera->functions->wait_for_event = camera_wait_for_event;
 
 	LIBXML_TEST_VERSION
 
@@ -840,8 +896,6 @@ int camera_init(Camera *camera, GPContext *context)
 		return ret;
 	}
 	gp_filesystem_set_funcs(camera->fs, &fsfuncs, camera);
-
-	file_num = get_dcf_file_num(camera);
 	load_image_list(camera);
 	return GP_OK;
 }
