@@ -84,6 +84,29 @@ struct _CameraPrivateLibrary
 	Em10Picture *pics;
 };
 
+static void
+print_to_file(char *fmt, ...)
+{
+	va_list argp;
+	FILE *fptr;
+
+	// use appropriate location if you are using MacOS or Linux
+	fptr = fopen("/tmp/em10.log", "a");
+
+	if (fptr == NULL)
+	{
+		printf("Error!");
+		exit(1);
+	}
+
+	va_start(argp, fmt);
+
+	vfprintf(fptr, fmt, argp);
+
+	va_end(argp);
+	fclose(fptr);
+}
+
 static int
 camera_exit(Camera *camera, GPContext *context)
 {
@@ -360,7 +383,6 @@ switch_to_play_mode(Camera *camera)
 	return http_command(camera, "switch_cammode.cgi?mode=play");
 }
 
-
 static int get_dcf_file_num(Camera *camera)
 {
 	switch_to_play_mode(camera);
@@ -382,10 +404,12 @@ static int get_dcf_file_num(Camera *camera)
 
 static void load_image_list(Camera *camera)
 {
+	print_to_file("load_image_list\n");
 	// Set the number of files
 	int num_pics;
 
 	num_pics = get_dcf_file_num(camera);
+	print_to_file("num_pics: %d\n", num_pics);
 
 	if (camera->pl->numpics < num_pics)
 	{
@@ -437,6 +461,7 @@ static int
 folder_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
 				 void *data, GPContext *context)
 {
+	print_to_file("folder_list_func. Folder: %s\n", folder);
 	Camera *camera = data;
 	load_image_list(camera);
 
@@ -482,6 +507,7 @@ static int
 file_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
 			   void *data, GPContext *context)
 {
+	print_to_file("file_list_func. Folder: %s\n", folder);
 	Camera *camera = data;
 	int i;
 
@@ -496,7 +522,7 @@ file_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
 		strcat(tmp, filename);
 		if (!strcmp(tmp, camera->pl->pics[i].pic_path))
 		{
-			gp_list_append(list, camera->pl->pics[i].pic_path, NULL);
+			gp_list_append(list, filename, NULL);
 			continue;
 		}
 	}
@@ -512,7 +538,7 @@ file_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
 static int
 camera_capture(Camera *camera, CameraCaptureType type, CameraFilePath *path, GPContext *context)
 {
-	printf("Capturing\n");
+	print_to_file("Capturing\n");
 
 	int ret;
 	char *s, *url;
@@ -525,7 +551,7 @@ camera_capture(Camera *camera, CameraCaptureType type, CameraFilePath *path, GPC
 
 	stop_capture(camera);
 
-	printf("Captured\n");
+	print_to_file("Captured\n");
 
 	if (ret < GP_OK)
 		return ret;
@@ -579,16 +605,18 @@ int camera_about(Camera *camera, CameraText *about, GPContext *context)
 }
 
 static int
-_timeout_passed(struct timeval *start, int timeout) {
+_timeout_passed(struct timeval *start, int timeout)
+{
 	struct timeval curtime;
 
-	gettimeofday (&curtime, NULL);
-	return ((curtime.tv_sec - start->tv_sec)*1000)+((curtime.tv_usec - start->tv_usec)/1000) >= timeout;
+	gettimeofday(&curtime, NULL);
+	return ((curtime.tv_sec - start->tv_sec) * 1000) + ((curtime.tv_usec - start->tv_usec) / 1000) >= timeout;
 }
 
 static int
 camera_wait_for_event(Camera *camera, int timeout, CameraEventType *eventtype, void **eventdata, GPContext *context)
 {
+	print_to_file("camera_wait_for_event\n");
 	struct timeval event_start;
 	CameraFilePath *path;
 
@@ -600,11 +628,14 @@ camera_wait_for_event(Camera *camera, int timeout, CameraEventType *eventtype, v
 	{
 		path = malloc(sizeof(CameraFilePath));
 		int num_pics = get_dcf_file_num(camera);
+		print_to_file("existing num_pics: %d\n", camera->pl->numpics);
+		print_to_file("new num_pics: %d\n", num_pics);
 		if (num_pics > camera->pl->numpics)
 		{
 			load_image_list(camera);
 			strcpy(path->folder, camera->pl->pics[num_pics - 1].dir_path);
 			strcpy(path->name, camera->pl->pics[num_pics - 1].name);
+			print_to_file("file added: %s/%s\n", path->folder, path->name);
 			*eventtype = GP_EVENT_FILE_ADDED;
 			*eventdata = path;
 			return GP_OK;
@@ -612,10 +643,11 @@ camera_wait_for_event(Camera *camera, int timeout, CameraEventType *eventtype, v
 
 		free(path);
 
-		if (_timeout_passed (&event_start, timeout))
+		if (_timeout_passed(&event_start, timeout))
 			break;
-		usleep(1000*1000); /* 100 ms */
+		usleep(1000 * 1000); /* 100 ms */
 	}
+	print_to_file("event type: %d\n", *eventtype);
 	return GP_OK;
 }
 
@@ -637,6 +669,8 @@ camera_wait_for_event(Camera *camera, int timeout, CameraEventType *eventtype, v
 static int
 get_file_func(CameraFilesystem *fs, const char *folder, const char *filename, CameraFileType type, CameraFile *file, void *data, GPContext *context)
 {
+
+	print_to_file("get_file_func\n");
 	Camera *camera = data;
 	int i;
 	CURLcode res;
@@ -821,7 +855,7 @@ camera_config_set(Camera *camera, CameraWidget *window, GPContext *context)
 
 int camera_abilities(CameraAbilitiesList *list)
 {
-	printf("camera_abilities");
+	print_to_file("camera_abilities\n");
 	CameraAbilities a;
 
 	memset(&a, 0, sizeof(a));
@@ -866,6 +900,7 @@ CameraFilesystemFuncs fsfuncs = {
  */
 int camera_init(Camera *camera, GPContext *context)
 {
+	print_to_file("camera_init\n");
 	GPPortInfo info;
 	int ret;
 	int tries;
