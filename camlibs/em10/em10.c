@@ -356,30 +356,35 @@ http_command(Camera *camera, char *cmd)
 static int
 start_capture(Camera *camera)
 {
+	print_to_file("start_capture\n");
 	return http_command(camera, "exec_shutter.cgi?com=1st2ndpush");
 }
 
 static int
 stop_capture(Camera *camera)
 {
+	print_to_file("stop_capture\n");
 	return http_command(camera, "exec_shutter.cgi?com=2nd1strelease");
 }
 
 static int
 switch_to_shutter_mode(Camera *camera)
 {
+	print_to_file("switch_to_shutter_mode\n");
 	return http_command(camera, "switch_cammode.cgi?mode=shutter");
 }
 
 static int
 switch_to_rec_mode(Camera *camera)
 {
+	print_to_file("switch_to_rec_mode\n");
 	return http_command(camera, "switch_cammode.cgi?mode=rec");
 }
 
 static int
 switch_to_play_mode(Camera *camera)
 {
+	print_to_file("switch_to_play_mode\n");
 	return http_command(camera, "switch_cammode.cgi?mode=play");
 }
 
@@ -538,7 +543,7 @@ file_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
 static int
 camera_capture(Camera *camera, CameraCaptureType type, CameraFilePath *path, GPContext *context)
 {
-	print_to_file("Capturing\n");
+	print_to_file("camera_capture\n");
 
 	int ret;
 	char *s, *url;
@@ -636,6 +641,7 @@ camera_wait_for_event(Camera *camera, int timeout, CameraEventType *eventtype, v
 			strcpy(path->folder, camera->pl->pics[num_pics - 1].dir_path);
 			strcpy(path->name, camera->pl->pics[num_pics - 1].name);
 			print_to_file("file added: %s/%s\n", path->folder, path->name);
+			gp_filesystem_reset(camera->fs);
 			*eventtype = GP_EVENT_FILE_ADDED;
 			*eventdata = path;
 			return GP_OK;
@@ -801,6 +807,8 @@ camera_config_get(Camera *camera, CameraWidget **window, GPContext *context)
 static int
 camera_config_set(Camera *camera, CameraWidget *window, GPContext *context)
 {
+	print_to_file("camera_config_set\n");
+
 	int ret;
 	CameraWidget *settings;
 
@@ -815,6 +823,7 @@ camera_config_set(Camera *camera, CameraWidget *window, GPContext *context)
 
 		gp_widget_get_child(settings, i, &widget);
 		gp_widget_get_label(widget, &widget_label);
+		print_to_file("camera_config_set: %s\n", widget_label);
 
 		if (GP_OK == gp_widget_get_child_by_name(window, "bulb", &widget) && gp_widget_changed(widget))
 		{
@@ -822,6 +831,8 @@ camera_config_set(Camera *camera, CameraWidget *window, GPContext *context)
 
 			if (GP_OK != (ret = gp_widget_get_value(widget, &val)))
 				return ret;
+
+			gp_widget_set_changed (widget, 0);
 
 			if (val)
 			{
