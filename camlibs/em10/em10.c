@@ -48,6 +48,7 @@
 #include <gphoto2/gphoto2-result.h>
 
 #include "libgphoto2/i18n.h"
+#include "liveview.h"
 
 #define GP_MODULE "em10"
 
@@ -81,6 +82,7 @@ struct _CameraPrivateLibrary
 	/* all private data */
 	int numpics;
 	int liveview;
+	int udpsocket;
 	Em10Picture *pics;
 };
 
@@ -109,12 +111,6 @@ print_to_file(char *fmt, ...)
 
 static int
 camera_exit(Camera *camera, GPContext *context)
-{
-	return GP_OK;
-}
-
-static int
-camera_capture_preview(Camera *camera, CameraFile *file, GPContext *context)
 {
 	return GP_OK;
 }
@@ -368,6 +364,20 @@ stop_capture(Camera *camera)
 }
 
 static int
+start_liveview(Camera *camera)
+{
+	print_to_file("start_liveview\n");
+	return http_command(camera, "exec_takemisc.cgi?com=startliveview&port=23333");
+}
+
+static int
+stop__liveview(Camera *camera)
+{
+	print_to_file("stop__liveview\n");
+	return http_command(camera, "exec_takemisc.cgi?com=stopliveview&port=23333");
+}
+
+static int
 switch_to_shutter_mode(Camera *camera)
 {
 	print_to_file("switch_to_shutter_mode\n");
@@ -386,6 +396,73 @@ switch_to_play_mode(Camera *camera)
 {
 	print_to_file("switch_to_play_mode\n");
 	return http_command(camera, "switch_cammode.cgi?mode=play");
+}
+
+static int
+camera_capture_preview(Camera *camera, CameraFile *file, GPContext *context)
+{
+	int valread;
+	struct sockaddr_in serv_addr;
+	unsigned char buffer[65536];
+	GPPortInfo info;
+	int i, start, end;
+	bool has_picture = false;
+
+	if (!camera->pl->liveview)
+	{
+		switch_to_rec_mode(camera);
+		start_liveview(camera);
+		camera->pl->liveview = 1;
+		if (camera->pl->udpsocket <= 0)
+		{
+			if ((camera->pl->udpsocket = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+			{
+				GP_LOG_E("\n Socket creation error \n");
+				return GP_ERROR;
+			}
+
+			gp_port_get_info(camera->port, &info);
+
+			memset(&serv_addr, 0, sizeof(serv_addr));
+
+			serv_addr.sin_family = AF_INET;
+			serv_addr.sin_port = htons(23333);
+			serv_addr.sin_addr.s_addr = 0;
+
+			if (bind(camera->pl->udpsocket, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+			{
+				GP_LOG_E("bind Failed: %d", errno);
+				return GP_ERROR;
+			}
+		}
+	}
+	else
+	{
+		/* this reminds the camera we are still doing it */
+		print_to_file("still liveviewing\n");
+	}
+
+	Picture *picture = new_picture();
+
+	while (!has_picture)
+	{
+		Frame *frame = malloc(sizeof(Frame));
+		generate_frame(camera->pl->udpsocket, frame);
+		if (frame->buffer == NULL)
+		{
+			break;
+		}
+
+		has_picture = add_data(picture, frame);
+		if (has_picture)
+		{
+			free(frame);
+			gp_file_set_mime_type(file, GP_MIME_JPEG);
+			return gp_file_append(file, picture->jpeg, picture->jpeg_len);
+		}
+		free(frame);
+	}
+	return GP_ERROR;
 }
 
 static int get_dcf_file_num(Camera *camera)
@@ -832,7 +909,7 @@ camera_config_set(Camera *camera, CameraWidget *window, GPContext *context)
 			if (GP_OK != (ret = gp_widget_get_value(widget, &val)))
 				return ret;
 
-			gp_widget_set_changed (widget, 0);
+			gp_widget_set_changed(widget, 0);
 
 			if (val)
 			{
