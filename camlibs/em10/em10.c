@@ -388,7 +388,7 @@ static int
 switch_to_rec_mode(Camera *camera)
 {
 	print_to_file("switch_to_rec_mode\n");
-	return http_command(camera, "switch_cammode.cgi?mode=rec");
+	return http_command(camera, "switch_cammode.cgi?mode=rec&lvqty=0640x0480");
 }
 
 static int
@@ -401,11 +401,8 @@ switch_to_play_mode(Camera *camera)
 static int
 camera_capture_preview(Camera *camera, CameraFile *file, GPContext *context)
 {
-	int valread;
 	struct sockaddr_in serv_addr;
-	unsigned char buffer[65536];
 	GPPortInfo info;
-	int i, start, end;
 	bool has_picture = false;
 
 	if (!camera->pl->liveview)
@@ -456,9 +453,12 @@ camera_capture_preview(Camera *camera, CameraFile *file, GPContext *context)
 		has_picture = add_data(picture, frame);
 		if (has_picture)
 		{
-			free(frame);
+			print_to_file("sending picture. Size: %d\n", picture->jpeg_len);
 			gp_file_set_mime_type(file, GP_MIME_JPEG);
-			return gp_file_append(file, picture->jpeg, picture->jpeg_len);
+			int result = gp_file_append(file, picture->jpeg, picture->jpeg_len);
+
+			free(frame);
+			return result;
 		}
 		free(frame);
 	}

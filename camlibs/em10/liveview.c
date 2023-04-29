@@ -189,7 +189,7 @@ int main()
                 return EXIT_FAILURE;
             }
         }
-            free(frame);
+        free(frame);
     }
 
     free_picture(picture);

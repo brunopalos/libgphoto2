@@ -27,6 +27,9 @@ typedef struct
     uint32_t frame_number;
 } Picture;
 
-// TODO
+Picture *new_picture();
+int generate_frame(int sockfd, Frame *frame);
+bool add_data(Picture *pic, Frame *frame);
+
 
 #endif /* !defined(CAMLIBS_EM10_LIVEVIEW_H) */

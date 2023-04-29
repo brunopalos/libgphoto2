@@ -7,6 +7,8 @@ noinst_DATA           += %reldir%/README.em10
 EXTRA_LTLIBRARIES     += em10.la
 
 em10_la_SOURCES       = %reldir%/em10.c
+em10_la_SOURCES      += %reldir%/liveview.c
+em10_la_SOURCES      += %reldir%/liveview.h
 
 em10_la_CFLAGS        = $(camlib_cflags)
 em10_la_CPPFLAGS      = $(camlib_cppflags)
