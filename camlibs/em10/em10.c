@@ -77,9 +77,16 @@ typedef struct
 	char *pic_path;
 } Em10Picture;
 
+typedef enum
+{
+	Play,
+	Rec,
+	Shutter
+} EM10CamMode;
 struct _CameraPrivateLibrary
 {
 	/* all private data */
+	EM10CamMode cam_mode;
 	int numpics;
 	int liveview;
 	int udpsocket;
@@ -381,6 +388,7 @@ static int
 switch_to_shutter_mode(Camera *camera)
 {
 	print_to_file("switch_to_shutter_mode\n");
+	camera->pl->cam_mode = Shutter;
 	return http_command(camera, "switch_cammode.cgi?mode=shutter");
 }
 
@@ -388,6 +396,7 @@ static int
 switch_to_rec_mode(Camera *camera)
 {
 	print_to_file("switch_to_rec_mode\n");
+	camera->pl->cam_mode = Rec;
 	return http_command(camera, "switch_cammode.cgi?mode=rec&lvqty=0640x0480");
 }
 
@@ -395,6 +404,7 @@ static int
 switch_to_play_mode(Camera *camera)
 {
 	print_to_file("switch_to_play_mode\n");
+	camera->pl->cam_mode = Play;
 	return http_command(camera, "switch_cammode.cgi?mode=play");
 }
 
@@ -405,13 +415,23 @@ camera_capture_preview(Camera *camera, CameraFile *file, GPContext *context)
 	GPPortInfo info;
 	bool has_picture = false;
 
+	if (camera->pl->cam_mode != Rec)
+	{
+		if (camera->pl->liveview)
+		{
+
+		}
+	}
+
 	if (!camera->pl->liveview)
 	{
+		print_to_file("First time streaming\n");
 		switch_to_rec_mode(camera);
 		start_liveview(camera);
 		camera->pl->liveview = 1;
 		if (camera->pl->udpsocket <= 0)
 		{
+			print_to_file("Creating socket\n");
 			if ((camera->pl->udpsocket = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
 			{
 				GP_LOG_E("\n Socket creation error \n");
@@ -433,10 +453,11 @@ camera_capture_preview(Camera *camera, CameraFile *file, GPContext *context)
 			}
 		}
 	}
-	else
+	else if (camera->pl->cam_mode != Rec)
 	{
-		/* this reminds the camera we are still doing it */
-		print_to_file("still liveviewing\n");
+			print_to_file("Already streaming\n");
+			switch_to_rec_mode(camera);
+			start_liveview(camera);
 	}
 
 	Picture *picture = new_picture();
@@ -453,12 +474,18 @@ camera_capture_preview(Camera *camera, CameraFile *file, GPContext *context)
 		has_picture = add_data(picture, frame);
 		if (has_picture)
 		{
-			print_to_file("sending picture. Size: %d\n", picture->jpeg_len);
-			gp_file_set_mime_type(file, GP_MIME_JPEG);
-			int result = gp_file_append(file, picture->jpeg, picture->jpeg_len);
+			if (picture->jpeg_len > 0)
+			{
+				gp_file_set_mime_type(file, GP_MIME_JPEG);
+				int result = gp_file_append(file, picture->jpeg, picture->jpeg_len);
 
-			free(frame);
-			return result;
+				free(frame);
+				return result;
+			} 
+			else 
+			{
+				print_to_file("Empty frame\n");
+			}
 		}
 		free(frame);
 	}
@@ -996,6 +1023,7 @@ int camera_init(Camera *camera, GPContext *context)
 	int file_num;
 
 	camera->pl = calloc(sizeof(CameraPrivateLibrary), 1);
+	camera->pl->cam_mode = Shutter;
 
 	/* First, set up all the function pointers */
 	camera->functions->exit = camera_exit;
