@@ -3021,6 +3021,11 @@ camera_abilities (CameraAbilitiesList *list)
 				(strstr(models[i].model,"EOS") || strstr(models[i].model,"Rebel"))
 			)
 				a.operations |= GP_OPERATION_TRIGGER_CAPTURE;
+
+			/* Enable for Panasonic */
+			if (models[i].usb_vendor == 0x04da)
+				a.operations |= GP_OPERATION_TRIGGER_CAPTURE;
+
 			/* Sony Alpha are also trigger capture capable */
 			if (	models[i].usb_vendor == 0x54c)
 				a.operations |= GP_OPERATION_TRIGGER_CAPTURE;
@@ -5457,6 +5462,11 @@ downloadfile:
 
 	path->name[0]='\0';
 	path->folder[0]='\0';
+
+	/* Synthesize a capture complete event to avoid waits. */
+	event.Code = PTP_EC_CaptureComplete;
+	event.Nparam = 0;
+	ptp_add_event (params, &event);
 
 	if (newobject != 0) /* NOTE: association add handled */
 		return add_object_to_fs_and_path (camera, newobject, path, context);
