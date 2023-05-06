@@ -389,7 +389,9 @@ switch_to_shutter_mode(Camera *camera)
 {
 	print_to_file("switch_to_shutter_mode\n");
 	camera->pl->cam_mode = Shutter;
-	return http_command(camera, "switch_cammode.cgi?mode=shutter");
+	int ret = http_command(camera, "switch_cammode.cgi?mode=shutter");
+	usleep(1000 * 1000); /* 1000 ms */
+	return ret;
 }
 
 static int
@@ -397,7 +399,9 @@ switch_to_rec_mode(Camera *camera)
 {
 	print_to_file("switch_to_rec_mode\n");
 	camera->pl->cam_mode = Rec;
-	return http_command(camera, "switch_cammode.cgi?mode=rec&lvqty=0640x0480");
+	int ret = http_command(camera, "switch_cammode.cgi?mode=rec&lvqty=0640x0480");
+	usleep(1000 * 1000); /* 1000 ms */
+	return ret;
 }
 
 static int
@@ -405,7 +409,9 @@ switch_to_play_mode(Camera *camera)
 {
 	print_to_file("switch_to_play_mode\n");
 	camera->pl->cam_mode = Play;
-	return http_command(camera, "switch_cammode.cgi?mode=play");
+	int ret = http_command(camera, "switch_cammode.cgi?mode=play");
+	usleep(1000 * 1000); /* 1000 ms */
+	return ret;
 }
 
 static int
@@ -755,7 +761,7 @@ camera_wait_for_event(Camera *camera, int timeout, CameraEventType *eventtype, v
 
 		if (_timeout_passed(&event_start, timeout))
 			break;
-		usleep(1000 * 1000); /* 100 ms */
+		usleep(1000 * 1000); /* 1000 ms */
 	}
 	print_to_file("event type: %d\n", *eventtype);
 	return GP_OK;
