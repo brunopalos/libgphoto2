@@ -92,164 +92,6 @@ struct _CameraPrivateLibrary
 	Em10Picture *pics;
 };
 
-static void
-print_to_file(char *fmt, ...)
-{
-	va_list argp;
-	FILE *fptr;
-
-	// use appropriate location if you are using MacOS or Linux
-	fptr = fopen("/tmp/em10.log", "a");
-
-	if (fptr == NULL)
-	{
-		printf("Error!");
-		exit(1);
-	}
-
-	va_start(argp, fmt);
-
-	vfprintf(fptr, fmt, argp);
-
-	va_end(argp);
-	fclose(fptr);
-}
-
-static int
-camera_exit(Camera *camera, GPContext *context)
-{
-	return GP_OK;
-}
-
-static int camera_about(Camera *camera, CameraText *about, GPContext *context);
-
-/**
- * Put a file onto the camera.
- *
- * This function is a CameraFilesystem method.
- */
-int put_file_func(CameraFilesystem *fs, const char *folder, const char *name,
-				  CameraFileType type, CameraFile *file, void *data, GPContext *context);
-int put_file_func(CameraFilesystem *fs, const char *folder, const char *name,
-				  CameraFileType type, CameraFile *file, void *data, GPContext *context)
-{
-	/*Camera *camera = data;*/
-
-	/*
-	 * Upload the file to the camera. Use gp_file_get_data_and_size, etc
-	 */
-
-	return GP_OK;
-}
-
-/**
- * Delete a file from the camera.
- *
- * This function is a CameraFilesystem method.
- */
-int delete_file_func(CameraFilesystem *fs, const char *folder,
-					 const char *filename, void *data, GPContext *context);
-int delete_file_func(CameraFilesystem *fs, const char *folder,
-					 const char *filename, void *data, GPContext *context)
-{
-	/*Camera *camera = data;*/
-
-	/* Delete the file from the camera. */
-
-	return GP_OK;
-}
-
-/**
- * Delete all files from the camera.
- *
- * This function is a CameraFilesystem method.
- */
-int delete_all_func(CameraFilesystem *fs, const char *folder, void *data,
-					GPContext *context);
-int delete_all_func(CameraFilesystem *fs, const char *folder, void *data,
-					GPContext *context)
-{
-	/*Camera *camera = data;*/
-
-	/*
-	 * Delete all files in the given folder. If your camera doesn't have
-	 * such a functionality, just don't implement this function.
-	 */
-
-	return GP_OK;
-}
-
-/**
- * Get the file info here and write it to space provided by caller.
- *
- * \param info Space provided by caller in which file info is written.
- *
- * This function is a CameraFilesystem method.
- */
-int get_info_func(CameraFilesystem *fs, const char *folder, const char *filename,
-				  CameraFileInfo *info, void *data, GPContext *context);
-int get_info_func(CameraFilesystem *fs, const char *folder, const char *filename,
-				  CameraFileInfo *info, void *data, GPContext *context)
-{
-	/*Camera *camera = data;*/
-
-	return GP_OK;
-}
-
-#if 0
-static int
-set_info_func (CameraFilesystem *fs, const char *folder, const char *file,
-	       CameraFileInfo info, void *data, GPContext *context)
-{
-	/*Camera *camera = data;*/
-
-	/* Set the file info here from <info> */
-
-	return GP_OK;
-}
-#endif
-
-static bool
-is_subdir(const char *dir, const char *subdir)
-{
-	int dir_len = strlen(dir);
-	if (strncmp(dir, subdir, dir_len) != 0)
-	{
-		return false;
-	}
-	return subdir[dir_len] == '/' && strchr(subdir + dir_len + 1, '/') == NULL;
-}
-
-/**
- * Get information on all available storages in the camera.
- *
- * This function is a CameraFilesystem method.
- */
-int storage_info_func(CameraFilesystem *fs,
-					  CameraStorageInformation **storageinformations,
-					  int *nrofstorageinformations, void *data,
-					  GPContext *context);
-int storage_info_func(CameraFilesystem *fs,
-					  CameraStorageInformation **storageinformations,
-					  int *nrofstorageinformations, void *data,
-					  GPContext *context)
-{
-	/*Camera *camera = data;*/
-
-	/* List your storages here */
-
-	return GP_ERROR_NOT_SUPPORTED;
-}
-
-/*@}*/
-
-/**********************************************************************/
-/**
- * @name camlib API functions
- *
- * @{
- */
-/**********************************************************************/
 
 static size_t
 write_callback(char *contents, size_t size, size_t nmemb, void *userp)
@@ -302,7 +144,7 @@ http_get(Camera *camera, char *cmd, Em10MemoryBuffer *buffer)
 	}
 	else
 	{
-		GP_LOG_D("result was get size: %d\n", buffer->size);
+		GP_LOG_D("result was get size: %lu\n", buffer->size);
 	}
 	curl_easy_cleanup(curl);
 	return GP_OK;
@@ -354,6 +196,94 @@ http_command(Camera *camera, char *cmd)
 	free(buffer);
 	return ret;
 }
+
+static void
+print_to_file(char *fmt, ...)
+{
+	va_list argp;
+	FILE *fptr;
+
+	// use appropriate location if you are using MacOS or Linux
+	fptr = fopen("/tmp/em10.log", "a");
+
+	if (fptr == NULL)
+	{
+		printf("Error!");
+		exit(1);
+	}
+
+	va_start(argp, fmt);
+
+	vfprintf(fptr, fmt, argp);
+
+	va_end(argp);
+	fclose(fptr);
+}
+
+static int get_unused_capacity(Camera *camera);
+
+static bool
+is_subdir(const char *dir, const char *subdir)
+{
+	int dir_len = strlen(dir);
+	if (strncmp(dir, subdir, dir_len) != 0)
+	{
+		return false;
+	}
+	return subdir[dir_len] == '/' && strchr(subdir + dir_len + 1, '/') == NULL;
+}
+
+static int
+camera_exit(Camera *camera, GPContext *context)
+{
+	return GP_OK;
+}
+
+/**
+ * Get information on all available storages in the camera.
+ *
+ * This function is a CameraFilesystem method.
+ */
+int storage_info_func(CameraFilesystem *fs,
+					  CameraStorageInformation **storageinformations,
+					  int *nrofstorageinformations, void *data,
+					  GPContext *context)
+{
+	Camera *camera = data;
+	CameraStorageInformation *sinfo;
+
+	sinfo = malloc(sizeof(CameraStorageInformation));
+	if (!sinfo)
+		return GP_ERROR_NO_MEMORY;
+
+	*storageinformations = sinfo;
+	*nrofstorageinformations = 1;
+
+	int unused_capacity = get_unused_capacity(camera);
+
+	sinfo->fields  = GP_STORAGEINFO_BASE;
+	strcpy(sinfo->basedir, "/");
+	sinfo->fields |= GP_STORAGEINFO_ACCESS;
+	sinfo->access  = GP_STORAGEINFO_AC_READONLY;
+	sinfo->fields |= GP_STORAGEINFO_STORAGETYPE;
+	sinfo->type    = GP_STORAGEINFO_ST_REMOVABLE_RAM;
+	sinfo->fields |= GP_STORAGEINFO_FILESYSTEMTYPE;
+	sinfo->fstype  = GP_STORAGEINFO_FST_DCF;
+	sinfo->fields |= GP_STORAGEINFO_FREESPACEKBYTES;
+	sinfo->freekbytes = le32toh(unused_capacity) / 1024;
+
+	return GP_OK;
+}
+
+/*@}*/
+
+/**********************************************************************/
+/**
+ * @name camlib API functions
+ *
+ * @{
+ */
+/**********************************************************************/
 
 static int
 start_capture(Camera *camera)
@@ -514,6 +444,25 @@ static int get_dcf_file_num(Camera *camera)
 
 	free(buffer);
 	return (int)strtol((char *)str_file_num, NULL, 10);
+}
+
+static int get_unused_capacity(Camera *camera)
+{
+	switch_to_play_mode(camera);
+	Em10MemoryBuffer *buffer = malloc(sizeof(Em10MemoryBuffer));
+	// TODO - handle errors
+	http_get(camera, "get_unusedcapacity.cgi", buffer);
+	char *temp = buffer->data;
+	xmlDocPtr doc = xmlParseDoc((unsigned char *)temp);
+	xmlNodePtr cur = NULL;
+
+	// TODO - handle errors and unexpected responses
+
+	cur = xmlDocGetRootElement(doc);
+	xmlChar *unused_capacity_bytes = xmlNodeGetContent(cur);
+
+	free(buffer);
+	return (int)strtol((char *)unused_capacity_bytes, NULL, 10);
 }
 
 static void load_image_list(Camera *camera)
@@ -708,7 +657,6 @@ static int camera_manual(Camera *camera, CameraText *manual, GPContext *context)
  *
  * This function is a method of the Camera object.
  */
-int camera_about(Camera *camera, CameraText *about, GPContext *context);
 int camera_about(Camera *camera, CameraText *about, GPContext *context)
 {
 	strcpy(about->text, _("Olympus E-M10 WiFi Library\n"
@@ -927,7 +875,7 @@ camera_config_set(Camera *camera, CameraWidget *window, GPContext *context)
 
 	for (int i = 0; i < widgets_count; i++)
 	{
-		char **widget_label;
+		const char *widget_label;
 		CameraWidget *widget;
 
 		gp_widget_get_child(settings, i, &widget);
@@ -982,7 +930,7 @@ int camera_abilities(CameraAbilitiesList *list)
 	strcpy(a.model, "Olympus:E-M10");
 	a.status = GP_DRIVER_STATUS_EXPERIMENTAL;
 	a.port = GP_PORT_IP;
-	a.operations = GP_CAPTURE_IMAGE;
+	a.operations = GP_OPERATION_CAPTURE_IMAGE | GP_OPERATION_CAPTURE_VIDEO | GP_OPERATION_CONFIG | GP_OPERATION_TRIGGER_CAPTURE;
 	a.file_operations = GP_FILE_OPERATION_NONE;
 	/* it should be possible to browse and DL images the files using the ReadImageFromCamera() function but for now lets keep it simple*/
 	a.folder_operations = GP_FOLDER_OPERATION_NONE;
@@ -1001,12 +949,8 @@ CameraFilesystemFuncs fsfuncs = {
 	.file_list_func = file_list_func,
 	.folder_list_func = folder_list_func,
 	//	.get_info_func = get_info_func,
-	//	.set_info_func = set_info_func,
 	.get_file_func = get_file_func,
-	//	.del_file_func = delete_file_func,
-	//	.put_file_func = put_file_func,
-	//	.delete_all_func = delete_all_func,
-	//	.storage_info_func = storage_info_func
+	.storage_info_func = storage_info_func
 };
 
 /**

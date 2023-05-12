@@ -58,7 +58,7 @@ int generate_frame(int sockfd, Frame *frame)
 uint8_t *find_jpeg(const uint8_t *buf, uint16_t buf_len, uint16_t* jpeg_len)
 {
     uint8_t *result_buf;
-    for (size_t i = 12; i < buf_len - 2; i++)
+    for (uint16_t i = 12; i < buf_len - 2; i++)
     {
         if (u8_to_u16(&buf[i]) == 0xffd8)
         {
@@ -154,7 +154,7 @@ int main()
     int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (socket_fd < 0)
     {
-        perror("Failed to create socket");
+        perror("Failed to create socket ");
         return EXIT_FAILURE;
     }
 

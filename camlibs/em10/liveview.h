@@ -20,7 +20,7 @@ typedef struct
 
 typedef struct
 {
-    uint8_t *jpeg;
+    char *jpeg;
     size_t jpeg_len;
     uint16_t current_chunk_number;
     uint32_t stream_number;
