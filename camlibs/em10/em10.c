@@ -1,7 +1,6 @@
 /** \file em10.c
  *
- * \author Copyright 2019 Robert Hasson <robert_hasson@yahoo.com>
- * \author Copyright 2019 Marcus Meissner <marcus@jet.franken.de>
+ * \author Copyright 2023 Bruno Palos
  *
  * \par
  * This library is free software; you can redistribute it and/or
@@ -984,7 +983,7 @@ int camera_abilities(CameraAbilitiesList *list)
 	a.status = GP_DRIVER_STATUS_EXPERIMENTAL;
 	a.port = GP_PORT_IP;
 	a.operations = GP_CAPTURE_IMAGE;
-	a.file_operations = GP_FILE_OPERATION_PREVIEW;
+	a.file_operations = GP_FILE_OPERATION_NONE;
 	/* it should be possible to browse and DL images the files using the ReadImageFromCamera() function but for now lets keep it simple*/
 	a.folder_operations = GP_FOLDER_OPERATION_NONE;
 	return gp_abilities_list_append(list, a);
@@ -1059,7 +1058,7 @@ int camera_init(Camera *camera, GPContext *context)
 
 int camera_id(CameraText *id)
 {
-	strcpy(id->text, "Olympus E-M10 Wifi");
+	strcpy(id->text, "Olympus Wifi");
 
 	return GP_OK;
 }
