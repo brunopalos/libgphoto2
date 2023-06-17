@@ -39,7 +39,7 @@
 #include "libgphoto2/i18n.h"
 #include "liveview.h"
 #include "common.h"
-#include "em10.h"
+#include "library.h"
 #include "protocol.h"
 
 static void

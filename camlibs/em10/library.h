@@ -1,5 +1,5 @@
-#ifndef CAMLIBS_EM10_EM10_H
-#define CAMLIBS_EM10_EM10_H
+#ifndef CAMLIBS_EM10_LIBRARY_H
+#define CAMLIBS_EM10_LIBRARY_H
 
 #define GP_MODULE "em10"
 
