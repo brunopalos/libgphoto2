@@ -1,6 +1,9 @@
-/** \file em10.c
+/** \file protocol.c
  *
  * \author Copyright 2023 Bruno Palos
+ * 
+ * \par
+ * This library was only tested for EM-10 Mark I.
  *
  * \par
  * This library is free software; you can redistribute it and/or

@@ -1,3 +1,33 @@
+/** \file livevew.c
+ *
+ * \author Copyright 2023 Bruno Palos
+ * 
+ * \par
+ * The liveview for EM-10 Mark I was inspired from 
+ * \link https://github.com/misaka4e21/olympus-liveview and
+ * implemented following the Liveview specification  from the OPC
+ * Communication Protocol, which can be downloaded from
+ * \link https://dl-support.olympus-imaging.com/opc/en/.
+ *
+ * \par
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * \par
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * \par
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Boston, MA  02110-1301  USA
+ *
+ */
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
