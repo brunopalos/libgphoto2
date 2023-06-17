@@ -576,7 +576,7 @@ int camera_abilities(CameraAbilitiesList *list)
 	CameraAbilities a;
 
 	memset(&a, 0, sizeof(a));
-	strcpy(a.model, "Olympus:E-M10");
+	strcpy(a.model, "Olympus:E-M10 Mark I");
 	a.status = GP_DRIVER_STATUS_EXPERIMENTAL;
 	a.port = GP_PORT_IP;
 	a.operations = GP_OPERATION_CAPTURE_IMAGE | GP_OPERATION_CAPTURE_VIDEO | GP_OPERATION_CONFIG | GP_OPERATION_TRIGGER_CAPTURE;
@@ -642,7 +642,7 @@ int camera_init(Camera *camera, GPContext *context)
 
 int camera_id(CameraText *id)
 {
-	strcpy(id->text, "Olympus Wifi");
+	strcpy(id->text, "em10");
 
 	return GP_OK;
 }
