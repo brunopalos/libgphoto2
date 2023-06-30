@@ -45,7 +45,9 @@ camlibs/konica/qm150.c
 camlibs/largan/lmini/largan.c
 camlibs/lg_gsm/library.c
 camlibs/lumix/lumix.c
-camlibs/em10/em10.c
+camlibs/em10mk1/library.c
+camlibs/em10mk1/liveview.c
+camlibs/em10mk1/protocol.c
 camlibs/mars/library.c
 camlibs/minolta/dimagev/dimagev.c
 camlibs/mustek/core.c

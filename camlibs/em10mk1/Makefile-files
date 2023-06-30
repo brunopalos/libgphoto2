@@ -1,32 +1,32 @@
 # -*- Makefile-automake -*-
 
-EXTRA_DIST            += %reldir%/README.em10
-noinst_DATA           += %reldir%/README.em10
+EXTRA_DIST            += %reldir%/README.em10mk1
+noinst_DATA           += %reldir%/README.em10mk1
 
 
-EXTRA_LTLIBRARIES     += em10.la
+EXTRA_LTLIBRARIES     += em10mk1.la
 
-em10_la_SOURCES       = %reldir%/library.c
-em10_la_SOURCES      += %reldir%/library.h
-em10_la_SOURCES      += %reldir%/common.h
-em10_la_SOURCES      += %reldir%/liveview.c
-em10_la_SOURCES      += %reldir%/liveview.h
-em10_la_SOURCES      += %reldir%/protocol.h
-em10_la_SOURCES      += %reldir%/protocol.c
+em10mk1_la_SOURCES       = %reldir%/library.c
+em10mk1_la_SOURCES      += %reldir%/library.h
+em10mk1_la_SOURCES      += %reldir%/common.h
+em10mk1_la_SOURCES      += %reldir%/liveview.c
+em10mk1_la_SOURCES      += %reldir%/liveview.h
+em10mk1_la_SOURCES      += %reldir%/protocol.h
+em10mk1_la_SOURCES      += %reldir%/protocol.c
 
-em10_la_CFLAGS        = $(camlib_cflags)
-em10_la_CPPFLAGS      = $(camlib_cppflags)
-em10_la_DEPENDENCIES  = $(camlib_dependencies)
-em10_la_LDFLAGS       = $(camlib_ldflags)
-em10_la_LIBADD        = $(camlib_libadd)
+em10mk1_la_CFLAGS        = $(camlib_cflags)
+em10mk1_la_CPPFLAGS      = $(camlib_cppflags)
+em10mk1_la_DEPENDENCIES  = $(camlib_dependencies)
+em10mk1_la_LDFLAGS       = $(camlib_ldflags)
+em10mk1_la_LIBADD        = $(camlib_libadd)
 
-em10_la_CFLAGS       += $(NO_UNUSED_CFLAGS)
+em10mk1_la_CFLAGS       += $(NO_UNUSED_CFLAGS)
 
-em10_la_CFLAGS       += $(LIBCURL_CFLAGS)
-em10_la_LIBADD       += $(LIBCURL_LIBS)
+em10mk1_la_CFLAGS       += $(LIBCURL_CFLAGS)
+em10mk1_la_LIBADD       += $(LIBCURL_LIBS)
 
-em10_la_CFLAGS       += $(LIBXML2_CFLAGS)
-em10_la_LIBADD       += $(LIBXML2_LIBS)
+em10mk1_la_CFLAGS       += $(LIBXML2_CFLAGS)
+em10mk1_la_LIBADD       += $(LIBXML2_LIBS)
 
-em10_la_CFLAGS       += $(LIBWS232_CFLAGS)
-em10_la_LIBADD       += $(LIBWS232_LIBS)
+em10mk1_la_CFLAGS       += $(LIBWS232_CFLAGS)
+em10mk1_la_LIBADD       += $(LIBWS232_LIBS)
