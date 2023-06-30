@@ -1,9 +1,9 @@
 /** \file livevew.c
  *
  * \author Copyright 2023 Bruno Palos
- * 
+ *
  * \par
- * The liveview for EM-10 Mark I was inspired from 
+ * The liveview for EM-10 Mark I was inspired from
  * \link https://github.com/misaka4e21/olympus-liveview and
  * implemented following the Liveview specification  from the OPC
  * Communication Protocol, which can be downloaded from
@@ -37,6 +37,7 @@
 #include <sys/socket.h>
 #include <stdarg.h>
 #include "liveview.h"
+#include <gphoto2/gphoto2-result.h>
 
 uint16_t u8_to_u16(const uint8_t *buf)
 {
@@ -56,7 +57,7 @@ int generate_frame(int sockfd, Frame *frame)
     ssize_t num_bytes = recvfrom(sockfd, buf, sizeof(buf), 0, &src_addr, &addrlen);
     if (num_bytes == -1)
     {
-        return -1;
+        return GP_ERROR;
     }
     uint16_t packet_type_code = u8_to_u16(&buf[0]);
 
@@ -73,7 +74,7 @@ int generate_frame(int sockfd, Frame *frame)
         packet_type = End;
         break;
     default:
-        return 0;
+        return GP_OK;
     }
 
     memcpy(frame->buffer, buf, num_bytes);
@@ -82,10 +83,10 @@ int generate_frame(int sockfd, Frame *frame)
     frame->chunk_number = u8_to_u16(&buf[2]);
     frame->frame_number = u8_to_u32(&buf[4]);
     frame->stream_number = u8_to_u32(&buf[8]);
-    return 1;
+    return GP_OK;
 }
 
-uint8_t *find_jpeg(const uint8_t *buf, uint16_t buf_len, uint16_t* jpeg_len)
+uint8_t *find_jpeg(const uint8_t *buf, uint16_t buf_len, uint16_t *jpeg_len)
 {
     uint8_t *result_buf;
     for (uint16_t i = 12; i < buf_len - 2; i++)
@@ -177,52 +178,4 @@ void free_picture(Picture *pic)
     pic->current_chunk_number = 0;
     pic->stream_number = 0;
     pic->frame_number = 0;
-}
-
-int main()
-{
-    int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (socket_fd < 0)
-    {
-        perror("Failed to create socket ");
-        return EXIT_FAILURE;
-    }
-
-    struct sockaddr_in address;
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(23333);
-
-    if (bind(socket_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
-    {
-        perror("Failed to bind socket");
-        return EXIT_FAILURE;
-    }
-
-    Picture *picture = new_picture();
-
-    while (true)
-    {
-        Frame *frame = malloc(sizeof(Frame));
-        generate_frame(socket_fd, frame);
-        if (frame->buffer == NULL)
-        {
-            break;
-        }
-
-        bool is_end = add_data(picture, frame);
-        if (is_end)
-        {
-            if (write(STDOUT_FILENO, picture->jpeg, picture->jpeg_len) < 0)
-            {
-                perror("Failed to write to stdout");
-                return EXIT_FAILURE;
-            }
-        }
-        free(frame);
-    }
-
-    free_picture(picture);
-
-    return EXIT_SUCCESS;
 }

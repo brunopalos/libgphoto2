@@ -1,9 +1,6 @@
 /** \file protocol.c
  *
  * \author Copyright 2023 Bruno Palos
- * 
- * \par
- * This library was only tested for EM-10 Mark I.
  *
  * \par
  * This library is free software; you can redistribute it and/or
@@ -76,6 +73,12 @@ print_to_file(char *fmt, ...)
 	fclose(fptr);
 }
 
+/**********************************************************************
+ *
+ * HTTP helper functions
+ *
+ **********************************************************************/
+
 static int
 http_command(Camera *camera, char *cmd)
 {
@@ -85,7 +88,6 @@ http_command(Camera *camera, char *cmd)
 	free(buffer);
 	return ret;
 }
-
 
 size_t
 write_callback(char *contents, size_t size, size_t nmemb, void *userp)
@@ -100,14 +102,13 @@ write_callback(char *contents, size_t size, size_t nmemb, void *userp)
 	buffer->size += realsize;
 	buffer->data[buffer->size] = 0x00;
 
-	GP_LOG_DATA(contents, realsize, "em10 read from url");
+	GP_LOG_DATA(contents, realsize, "em10mk1 read from url");
 
 	memcpy(buffer->data + oldsize, contents, realsize);
 	return realsize;
 }
 
-int
-http_get(Camera *camera, char *cmd, Em10MemoryBuffer *buffer)
+int http_get(Camera *camera, char *cmd, Em10MemoryBuffer *buffer)
 {
 	// TODO - handle errors
 	CURL *curl;
@@ -144,8 +145,7 @@ http_get(Camera *camera, char *cmd, Em10MemoryBuffer *buffer)
 	return GP_OK;
 }
 
-int
-http_post(Camera *camera, char *cmd, char *post_body)
+int http_post(Camera *camera, char *cmd, char *post_body)
 {
 	// TODO - handle errors
 	CURL *curl;
@@ -182,46 +182,37 @@ http_post(Camera *camera, char *cmd, char *post_body)
 	return GP_OK;
 }
 
-/*@}*/
-
-/**********************************************************************/
-/**
- * @name camlib API functions
+/**********************************************************************
  *
- * @{
- */
-/**********************************************************************/
+ * Camera protocol functions
+ *
+ **********************************************************************/
 
-int
-start_capture(Camera *camera)
+int start_capture(Camera *camera)
 {
 	print_to_file("start_capture\n");
 	return http_command(camera, "exec_shutter.cgi?com=1st2ndpush");
 }
 
-int
-stop_capture(Camera *camera)
+int stop_capture(Camera *camera)
 {
 	print_to_file("stop_capture\n");
 	return http_command(camera, "exec_shutter.cgi?com=2nd1strelease");
 }
 
-int
-start_liveview(Camera *camera)
+int start_liveview(Camera *camera)
 {
 	print_to_file("start_liveview\n");
 	return http_command(camera, "exec_takemisc.cgi?com=startliveview&port=23333");
 }
 
-int
-stop__liveview(Camera *camera)
+int stop__liveview(Camera *camera)
 {
 	print_to_file("stop__liveview\n");
 	return http_command(camera, "exec_takemisc.cgi?com=stopliveview&port=23333");
 }
 
-int
-switch_to_shutter_mode(Camera *camera)
+int switch_to_shutter_mode(Camera *camera)
 {
 	print_to_file("switch_to_shutter_mode\n");
 	camera->pl->cam_mode = Shutter;
@@ -230,8 +221,7 @@ switch_to_shutter_mode(Camera *camera)
 	return ret;
 }
 
-int
-switch_to_rec_mode(Camera *camera)
+int switch_to_rec_mode(Camera *camera)
 {
 	print_to_file("switch_to_rec_mode\n");
 	camera->pl->cam_mode = Rec;
@@ -240,8 +230,7 @@ switch_to_rec_mode(Camera *camera)
 	return ret;
 }
 
-int
-switch_to_play_mode(Camera *camera)
+int switch_to_play_mode(Camera *camera)
 {
 	print_to_file("switch_to_play_mode\n");
 	camera->pl->cam_mode = Play;
@@ -345,8 +334,7 @@ void load_image_list(Camera *camera)
 	return;
 }
 
-void
-init_protocol()
+void init_protocol()
 {
 	print_to_file("init_protocol\n");
 	curl_global_init(CURL_GLOBAL_ALL);

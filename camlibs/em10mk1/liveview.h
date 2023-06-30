@@ -1,9 +1,9 @@
 /** \file livevew.h
- * 
+ *
  * \author Copyright 2023 Bruno Palos
- * 
+ *
  * \par
- * The liveview for EM-10 Mark I was inspired from 
+ * The liveview for EM-10 Mark I was inspired from
  * \link https://github.com/misaka4e21/olympus-liveview and
  * implemented following the Liveview specification  from the OPC
  * Communication Protocol, which can be downloaded from
@@ -28,8 +28,8 @@
  * Boston, MA  02110-1301  USA
  *
  */
-#ifndef CAMLIBS_EM10_LIVEVIEW_H
-#define CAMLIBS_EM10_LIVEVIEW_H
+#ifndef CAMLIBS_EM10MK1_LIVEVIEW_H
+#define CAMLIBS_EM10MK1_LIVEVIEW_H
 
 typedef enum
 {
@@ -58,8 +58,9 @@ typedef struct
 } Picture;
 
 Picture *new_picture();
+
 int generate_frame(int sockfd, Frame *frame);
+
 bool add_data(Picture *pic, Frame *frame);
 
-
-#endif /* !defined(CAMLIBS_EM10_LIVEVIEW_H) */
+#endif /* !defined(CAMLIBS_EM10MK1_LIVEVIEW_H) */

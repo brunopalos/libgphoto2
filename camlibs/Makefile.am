@@ -120,7 +120,7 @@ include konica/Makefile-files
 include largan/lmini/Makefile-files
 include lg_gsm/Makefile-files
 include lumix/Makefile-files
-include em10/Makefile-files
+include em10mk1/Makefile-files
 include mars/Makefile-files
 include minolta/dimagev/Makefile-files
 include minolta/Makefile-files

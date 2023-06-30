@@ -1,7 +1,7 @@
 #include <stddef.h>
 
-#ifndef CAMLIBS_EM10_COMMON_H
-#define CAMLIBS_EM10_COMMON_H
+#ifndef CAMLIBS_EM10MK1_COMMON_H
+#define CAMLIBS_EM10MK1_COMMON_H
 
 typedef struct
 {
@@ -34,4 +34,4 @@ struct _CameraPrivateLibrary
 	Em10Picture *pics;
 };
 
-#endif /* !defined(CAMLIBS_EM10_COMMON_H) */
+#endif /* !defined(CAMLIBS_EM10MK1_COMMON_H) */

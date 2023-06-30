@@ -1,9 +1,6 @@
 /** \file library.c
  *
  * \author Copyright 2023 Bruno Palos
- * 
- * \par
- * This library was only tested for EM-10 Mark I.
  *
  * \par
  * This library is free software; you can redistribute it and/or
@@ -68,8 +65,7 @@ print_to_file(char *fmt, ...)
 	fclose(fptr);
 }
 
-int
-camera_exit(Camera *camera, GPContext *context)
+int camera_exit(Camera *camera, GPContext *context)
 {
 	return GP_OK;
 }
@@ -96,22 +92,21 @@ int storage_info_func(CameraFilesystem *fs,
 
 	int unused_capacity = get_unused_capacity(camera);
 
-	sinfo->fields  = GP_STORAGEINFO_BASE;
+	sinfo->fields = GP_STORAGEINFO_BASE;
 	strcpy(sinfo->basedir, "/");
 	sinfo->fields |= GP_STORAGEINFO_ACCESS;
-	sinfo->access  = GP_STORAGEINFO_AC_READONLY;
+	sinfo->access = GP_STORAGEINFO_AC_READONLY;
 	sinfo->fields |= GP_STORAGEINFO_STORAGETYPE;
-	sinfo->type    = GP_STORAGEINFO_ST_REMOVABLE_RAM;
+	sinfo->type = GP_STORAGEINFO_ST_REMOVABLE_RAM;
 	sinfo->fields |= GP_STORAGEINFO_FILESYSTEMTYPE;
-	sinfo->fstype  = GP_STORAGEINFO_FST_DCF;
+	sinfo->fstype = GP_STORAGEINFO_FST_DCF;
 	sinfo->fields |= GP_STORAGEINFO_FREESPACEKBYTES;
 	sinfo->freekbytes = le32toh(unused_capacity) / 1024;
 
 	return GP_OK;
 }
 
-int
-camera_capture_preview(Camera *camera, CameraFile *file, GPContext *context)
+int camera_capture_preview(Camera *camera, CameraFile *file, GPContext *context)
 {
 	bool has_picture = false;
 
@@ -119,7 +114,6 @@ camera_capture_preview(Camera *camera, CameraFile *file, GPContext *context)
 	{
 		if (camera->pl->liveview)
 		{
-
 		}
 	}
 
@@ -129,15 +123,16 @@ camera_capture_preview(Camera *camera, CameraFile *file, GPContext *context)
 		switch_to_rec_mode(camera);
 		start_liveview(camera);
 
-		if (start_streaming(camera) != GP_OK) {
+		if (start_streaming(camera) != GP_OK)
+		{
 			return GP_ERROR;
 		}
 	}
 	else if (camera->pl->cam_mode != Rec)
 	{
-			print_to_file("Already streaming\n");
-			switch_to_rec_mode(camera);
-			start_liveview(camera);
+		print_to_file("Already streaming\n");
+		switch_to_rec_mode(camera);
+		start_liveview(camera);
 	}
 
 	Picture *picture = new_picture();
@@ -161,8 +156,8 @@ camera_capture_preview(Camera *camera, CameraFile *file, GPContext *context)
 
 				free(frame);
 				return result;
-			} 
-			else 
+			}
+			else
 			{
 				print_to_file("Empty frame\n");
 			}
@@ -172,9 +167,8 @@ camera_capture_preview(Camera *camera, CameraFile *file, GPContext *context)
 	return GP_ERROR;
 }
 
-int
-folder_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
-				 void *data, GPContext *context)
+int folder_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
+					 void *data, GPContext *context)
 {
 	print_to_file("folder_list_func. Folder: %s\n", folder);
 	Camera *camera = data;
@@ -218,9 +212,8 @@ folder_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
  *
  * This function is a CameraFilesystem method.
  */
-int
-file_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
-			   void *data, GPContext *context)
+int file_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
+				   void *data, GPContext *context)
 {
 	print_to_file("file_list_func. Folder: %s\n", folder);
 	Camera *camera = data;
@@ -250,8 +243,7 @@ file_list_func(CameraFilesystem *fs, const char *folder, CameraList *list,
  *
  * This function is a method of the Camera object.
  */
-int
-camera_capture(Camera *camera, CameraCaptureType type, CameraFilePath *path, GPContext *context)
+int camera_capture(Camera *camera, CameraCaptureType type, CameraFilePath *path, GPContext *context)
 {
 	print_to_file("camera_capture\n");
 
@@ -285,8 +277,7 @@ camera_capture(Camera *camera, CameraCaptureType type, CameraFilePath *path, GPC
  *
  * This function is a method of the Camera object.
  */
-int
-camera_summary(Camera *camera, CameraText *summary, GPContext *context)
+int camera_summary(Camera *camera, CameraText *summary, GPContext *context)
 {
 	return GP_OK;
 }
@@ -327,8 +318,7 @@ _timeout_passed(struct timeval *start, int timeout)
 	return ((curtime.tv_sec - start->tv_sec) * 1000) + ((curtime.tv_usec - start->tv_usec) / 1000) >= timeout;
 }
 
-int
-camera_wait_for_event(Camera *camera, int timeout, CameraEventType *eventtype, void **eventdata, GPContext *context)
+int camera_wait_for_event(Camera *camera, int timeout, CameraEventType *eventtype, void **eventdata, GPContext *context)
 {
 	print_to_file("camera_wait_for_event\n");
 	struct timeval event_start;
@@ -381,8 +371,7 @@ camera_wait_for_event(Camera *camera, int timeout, CameraEventType *eventtype, v
  *
  * This function is a CameraFilesystem method.
  */
-int
-get_file_func(CameraFilesystem *fs, const char *folder, const char *filename, CameraFileType type, CameraFile *file, void *data, GPContext *context)
+int get_file_func(CameraFilesystem *fs, const char *folder, const char *filename, CameraFileType type, CameraFile *file, void *data, GPContext *context)
 {
 
 	print_to_file("get_file_func\n");
@@ -435,8 +424,7 @@ get_file_func(CameraFilesystem *fs, const char *folder, const char *filename, Ca
 	return data_set_ret;
 }
 
-int
-camera_config_get(Camera *camera, CameraWidget **window, GPContext *context)
+int camera_config_get(Camera *camera, CameraWidget **window, GPContext *context)
 {
 	CameraWidget *widget, *section;
 
@@ -510,8 +498,7 @@ camera_config_get(Camera *camera, CameraWidget **window, GPContext *context)
 	return GP_OK;
 }
 
-int
-camera_config_set(Camera *camera, CameraWidget *window, GPContext *context)
+int camera_config_set(Camera *camera, CameraWidget *window, GPContext *context)
 {
 	print_to_file("camera_config_set\n");
 
@@ -599,8 +586,7 @@ CameraFilesystemFuncs fsfuncs = {
 	.folder_list_func = folder_list_func,
 	//	.get_info_func = get_info_func,
 	.get_file_func = get_file_func,
-	.storage_info_func = storage_info_func
-};
+	.storage_info_func = storage_info_func};
 
 /**
  * Initialize a Camera object.
@@ -642,7 +628,7 @@ int camera_init(Camera *camera, GPContext *context)
 
 int camera_id(CameraText *id)
 {
-	strcpy(id->text, "em10");
+	strcpy(id->text, "em10mk1");
 
 	return GP_OK;
 }

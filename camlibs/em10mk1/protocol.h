@@ -1,9 +1,6 @@
 /** \file protocol.h
  *
  * \author Copyright 2023 Bruno Palos
- * 
- * \par
- * This library was only tested for EM-10 Mark I.
  *
  * \par
  * This library is free software; you can redistribute it and/or
@@ -24,28 +21,26 @@
  * Boston, MA  02110-1301  USA
  *
  */
-#ifndef CAMLIBS_EM10_PROTOCOL_H
-#define CAMLIBS_EM10_PROTOCOL_H
+#ifndef CAMLIBS_EM10MK1_PROTOCOL_H
+#define CAMLIBS_EM10MK1_PROTOCOL_H
 
-size_t
-write_callback(char *contents, size_t size, size_t nmemb, void *userp);
-
-int
-http_get(Camera *camera, char *cmd, Em10MemoryBuffer *buffer);
-
-int
-http_post(Camera *camera, char *cmd, char *post_body);
-
-
-/*@}*/
-
-/**********************************************************************/
-/**
- * @name camlib API functions
+/**********************************************************************
  *
- * @{
- */
-/**********************************************************************/
+ * HTTP helper functions
+ *
+ **********************************************************************/
+
+size_t write_callback(char *contents, size_t size, size_t nmemb, void *userp);
+
+int http_get(Camera *camera, char *cmd, Em10MemoryBuffer *buffer);
+
+int http_post(Camera *camera, char *cmd, char *post_body);
+
+/**********************************************************************
+ *
+ * Camera protocol functions
+ *
+ **********************************************************************/
 
 int start_capture(Camera *camera);
 
@@ -71,4 +66,4 @@ int start_streaming(Camera *camera);
 
 void init_protocol();
 
-#endif /* !defined(CAMLIBS_EM10_PROTOCOL_H) */
+#endif /* !defined(CAMLIBS_EM10MK1_PROTOCOL_H) */
