@@ -536,7 +536,7 @@ GP_CAMLIB([lg_gsm],[outdated])dnl
 AM_COND_IF([HAVE_LIBCURL], [dnl
 AM_COND_IF([HAVE_LIBXML2], [dnl
 GP_CAMLIB([lumix])dnl
-GP_CAMLIB([em10])dnl
+GP_CAMLIB([em10mk1])dnl
 ])
 ])
 GP_CAMLIB([mars])dnl
