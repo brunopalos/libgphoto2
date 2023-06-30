@@ -4850,6 +4850,7 @@ camera_sony_capture (Camera *camera, CameraCaptureType type, CameraFilePath *pat
 		!strcmp(params->deviceinfo.Model, "ILCE-7RM4")		||
 		!strcmp(params->deviceinfo.Model, "ILCE-7RM4A")		||
 		!strcmp(params->deviceinfo.Model, "DSC-RX0M2")		||
+		!strcmp(params->deviceinfo.Model, "ILCE-7M3")		||
 		!strcmp(params->deviceinfo.Model, "ILCE-7C")
 	)) {
 		/* For some as yet unknown reason the ZV-1, the RX100M7 and the A7 R4 need around 3 seconds startup time
@@ -7417,6 +7418,11 @@ handleregular:
 	return GP_OK;
 }
 
+static int ptp_max(int a, int b) {
+	if (a > b) return a;
+	return b;
+}
+
 static int
 snprintf_ptp_property (char *txt, int spaceleft, PTPPropertyValue *data, uint16_t dt)
 {
@@ -7425,14 +7431,19 @@ snprintf_ptp_property (char *txt, int spaceleft, PTPPropertyValue *data, uint16_
 	if (dt & PTP_DTC_ARRAY_MASK) {
 		unsigned int i;
 		const char *origtxt = txt;
-#define SPACE_LEFT (origtxt + spaceleft - txt)
+#define SPACE_LEFT ptp_max(0, (origtxt + spaceleft - txt))
 
 		txt += snprintf (txt, SPACE_LEFT, "a[%d] ", data->a.count);
-		for ( i=0; i<data->a.count; i++) {
+		unsigned int n_to_print = data->a.count;
+		if (n_to_print > 64)
+			n_to_print = 64;
+		for ( i=0; i<n_to_print; i++) {
 			txt += snprintf_ptp_property (txt, SPACE_LEFT, &data->a.v[i], dt & ~PTP_DTC_ARRAY_MASK);
-			if (i!=data->a.count-1)
+			if (i!=n_to_print-1)
 				txt += snprintf (txt, SPACE_LEFT, ",");
 		}
+		if (n_to_print < data->a.count)
+			txt += snprintf (txt, SPACE_LEFT, ", ...");
 		return txt - origtxt;
 #undef SPACE_LEFT
 	} else {
@@ -7570,11 +7581,6 @@ nikon_curve_put (CameraFilesystem *fs, const char *folder, CameraFile *file,
 {
 	/* not yet */
 	return (GP_OK);
-}
-
-static int ptp_max(int a, int b) {
-	if (a > b) return a;
-	return b;
 }
 
 static int

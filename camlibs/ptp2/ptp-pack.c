@@ -2299,9 +2299,19 @@ ptp_unpack_CANON_changes (PTPParams *params, unsigned char* data, unsigned int d
 				case PTP_DPC_CANON_EOS_ModelID:
 				case PTP_DPC_CANON_EOS_LensID:
 				case PTP_DPC_CANON_EOS_StroboFiring:
+				case PTP_DPC_CANON_EOS_StroboDispState:
+				case PTP_DPC_CANON_EOS_LvCFilterKind:
+				case PTP_DPC_CANON_EOS_CADarkBright:
+				case PTP_DPC_CANON_EOS_ErrorForDisplay:
+				case PTP_DPC_CANON_EOS_ExposureSimMode:
+				case PTP_DPC_CANON_EOS_WindCut:
+				case PTP_DPC_CANON_EOS_MovieRecordVolume:
+				case PTP_DPC_CANON_EOS_ExtenderType:
+				case PTP_DPC_CANON_EOS_AEModeMovie:
 				case PTP_DPC_CANON_EOS_AFSelectFocusArea:
 				case PTP_DPC_CANON_EOS_ContinousAFMode:
 				case PTP_DPC_CANON_EOS_MirrorUpSetting:
+				case PTP_DPC_CANON_EOS_MirrorDownStatus:
 				case PTP_DPC_CANON_EOS_OLCInfoVersion:
 				case PTP_DPC_CANON_EOS_PowerZoomPosition:
 				case PTP_DPC_CANON_EOS_PowerZoomSpeed:
@@ -2317,6 +2327,7 @@ ptp_unpack_CANON_changes (PTPParams *params, unsigned char* data, unsigned int d
 				case PTP_DPC_CANON_EOS_OneShotRawOn:
 				case PTP_DPC_CANON_EOS_FlashChargingState:
 				case PTP_DPC_CANON_EOS_MovieServoAF:
+				case PTP_DPC_CANON_EOS_MirrorLockupState:
 					dpd->DataType = PTP_DTC_UINT32;
 					break;
 				/* enumeration for AEM is never provided, but is available to set */
@@ -2398,7 +2409,6 @@ ptp_unpack_CANON_changes (PTPParams *params, unsigned char* data, unsigned int d
 				case PTP_DPC_CANON_EOS_EVFSharpness:
 				case PTP_DPC_CANON_EOS_EVFWBMode:
 				case PTP_DPC_CANON_EOS_EVFClickWBCoeffs:
-				case PTP_DPC_CANON_EOS_ExposureSimMode:
 				case PTP_DPC_CANON_EOS_MovSize:
 				case PTP_DPC_CANON_EOS_DepthOfField:
 				case PTP_DPC_CANON_EOS_Brightness:
