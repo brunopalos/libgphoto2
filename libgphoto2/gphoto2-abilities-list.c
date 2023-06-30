@@ -503,6 +503,16 @@ gp_abilities_list_detect (CameraAbilitiesList *list,
 			gp_list_append (l, "Mass Storage Camera", xpath);
 			break;
 		}
+		case GP_PORT_PTPIP: {
+			char	*s;
+
+			s = strchr (xpath, ':');
+			if (!s) break;
+			s++;
+			if (!strlen(s)) break;
+			gp_list_append (l, "PTP/IP Camera", xpath);
+			break;
+		}
 		case GP_PORT_IP: {
 			char	*s;
 
