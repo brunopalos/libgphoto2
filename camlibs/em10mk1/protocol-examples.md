@@ -2,6 +2,8 @@
 
 ## URL examples
 
+Note that some of these were not tested and not used in this library. They are just listed for reference.
+
 http://192.168.0.10/clear_resvflg.cgi
 http://192.168.0.10/exec_pwoff.cgi
 http://192.168.0.10/exec_shutter.cgi?com=1st2ndpush
@@ -66,6 +68,7 @@ http://192.168.0.10/switch_cammode.cgi?mode=shutter
 
 curl http://192.168.0.10/get_commandlist.cgi
 
+```xml
 <?xml version="1.0"?>
 <oishare>
  <version>2.20</version>
@@ -291,12 +294,15 @@ curl http://192.168.0.10/get_commandlist.cgi
   </http_method>
  </cgi>
 </oishare>
+```
 
 ## Camera properties
 
+Camera mode must be Rec (see bellow)
+
 curl http://192.168.0.10/get_camprop.cgi?com=desc&propname=desclist
 
-
+```xml
 <?xml version="1.0"?>
 <desclist>
     <desc>
@@ -377,14 +383,77 @@ curl http://192.168.0.10/get_camprop.cgi?com=desc&propname=desclist
         <enum>ART01 ART02 ART03 ART04 ART05 ART06 ART07 ART08 ART09 ART10 ART11 ART12 ARTBKT</enum>
     </desc>
 </desclist>
+```
 
 ## Getting single property example
 
+Camera mode must be Rec (see bellow)
+
 curl http://192.168.0.10/get_camprop.cgi?com=desc&propname=isospeedvalue
+
+```xml
+<?xml version="1.0"?>
+<desc>
+    <propname>isospeedvalue</propname>
+    <attribute>getset</attribute>
+    <value>1600</value>
+    <enum>Low 200 250 320 400 500 640 800 1000 1250 1600</enum>
+</desc>
+```
 
 ## Setting a camera property example
 
 curl -X POST "http://192.168.0.10/set_camprop.cgi?com=set&propname=artfilter" -d '<set><value>ART04</value></set>'
+
+## List pictures
+
+Camera modes must be Play or Rec (see bellow)
+
+curl http://192.168.0.10/get_imglist.cgi?DIR=/DCIM/100OLYMP
+
+```
+VER_100
+/DCIM/100OLYMP,P9280001.AVI,950625704,0,20284,16578
+/DCIM/100OLYMP,P6130005.JPG,6137845,0,20685,36243
+/DCIM/100OLYMP,P6130006.JPG,6311473,0,20685,36245
+/DCIM/100OLYMP,P9280004.AVI,1807596552,0,20284,16937
+/DCIM/100OLYMP,P6130007.JPG,4535041,0,20685,36248
+/DCIM/100OLYMP,P6130008.JPG,6237337,0,20685,36262
+/DCIM/100OLYMP,P6130009.JPG,6367587,0,20685,36264
+/DCIM/100OLYMP,P6130010.JPG,6261690,0,20685,36273
+/DCIM/100OLYMP,P6130011.JPG,6325992,0,20685,41364
+/DCIM/100OLYMP,P6130012.JPG,6130712,0,20685,41382
+/DCIM/100OLYMP,P6130013.JPG,6144925,0,20685,41398
+```
+ 
+## Download picture
+
+Camera modes must be Play or Rec (see bellow)
+
+curl http://192.168.0.10/DCIM/100OLYMP/PICTURE001.JPG
+
+## Take pictures
+
+Camera mode must be Shutter (see bellow)
+
+curl http://192.168.0.10/exec_shutter.cgi?com=1st2ndpush
+curl http://192.168.0.10/exec_shutter.cgi?com=1stpush
+curl http://192.168.0.10/exec_shutter.cgi?com=1strelease
+curl http://192.168.0.10/exec_shutter.cgi?com=2nd1strelease
+curl http://192.168.0.10/exec_shutter.cgi?com=2ndpush
+curl http://192.168.0.10/exec_shutter.cgi?com=2ndrelease
+
+## Start & stop streaming
+
+Camera mode must be Rec (see bellow)
+
+Start streaming to UDP port 23333 using Olympus protocol
+
+curl 'http://192.168.0.10/exec_takemisc.cgi?com=startliveview&port=23333'
+
+Stop streaming
+
+curl "http://192.168.0.10/exec_takemisc.cgi?com=stopliveview
 
 ## Setting camera modes
 
@@ -392,20 +461,7 @@ curl http://192.168.0.10/switch_cammode.cgi?mode=rec&lvqty=
 curl http://192.168.0.10/switch_cammode.cgi?mode=play
 curl http://192.168.0.10/switch_cammode.cgi?mode=shutter
 
-## List pictures
+### Sources
 
-curl http://192.168.0.10/get_imglist.cgi?DIR=/DCIM
- 
-## Download picture
-
-curl http://192.168.0.10/DCIM/100OLYMP/PICTURE001.JPG
-
-## Start & stop streaming
-
-Start streaming to UDP port 23333 using Olympus protocol (see )
-
-curl 'http://192.168.0.10/exec_takemisc.cgi?com=startliveview&port=23333'
-
-Stop streaming
-
-curl "http://192.168.0.10/exec_takemisc.cgi?com=stopliveview
+* https://gist.github.com/mangelajo/6fa005ff3544fecdecfa
+* https://dl-support.olympus-imaging.com/opc/en/
