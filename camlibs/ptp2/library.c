@@ -1783,6 +1783,9 @@ static struct {
 	/* Stefan Weiberg at SUSE */
 	{"Nikon:Z9",			  0x04b0, 0x0450, PTP_CAP|PTP_CAP_PREVIEW},
 
+	/* Ben Govero */
+	{"Nikon:Z8",			  0x04b0, 0x0451, PTP_CAP|PTP_CAP_PREVIEW},
+
 	/* Z://github.com/gphoto/libgphoto2/pull/750#issuecomment-1189987634 */
 	{"Nikon:Z30",			  0x04b0, 0x0452, PTP_CAP|PTP_CAP_PREVIEW},
 
@@ -2805,6 +2808,8 @@ static struct {
 	{"GoPro:HERO10 Black",			0x2672, 0x0056, 0},
 	/* https://github.com/libmtp/libmtp/issues/136 */
 	{"GoPro:HERO11 Black",			0x2672, 0x0059, 0},
+	/* https://github.com/libmtp/libmtp/issues/162 */
+	{"GoPro:HERO11 Black mini",		0x2672, 0x005a, 0},
 #endif
 };
 
@@ -5946,7 +5951,7 @@ camera_trigger_canon_eos_capture (Camera *camera, GPContext *context)
 
 			/* are we in manual focus mode ... value would be 3 */
 			if (PTP_RC_OK == ptp_canon_eos_getdevicepropdesc (params, PTP_DPC_CANON_EOS_FocusMode, &dpd)) {
-				if ((dpd.DataType == PTP_DTC_UINT16) && (dpd.CurrentValue.u16 == 3)) {
+				if ((dpd.DataType == PTP_DTC_UINT32) && (dpd.CurrentValue.u32 == 3)) {
 					manualfocus = 1;
 					/* will do 1 pass through the focusing loop for good measure */
 					GP_LOG_D("detected manual focus. skipping focus detection logic");
