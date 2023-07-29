@@ -2745,6 +2745,29 @@ static struct deviceproptableu16 canon_eos_image_format[] = {
 	{ N_("sRAW + Tiny JPEG"),		0x2cf3, 0 }, /*Canon EOS 5D Mark III*/
 	/* There are more RAW + 'smallish' JPEG combinations for at least the 5DM3 possible.
 	   Axel was simply to lazy to exercise the combinatorial explosion. :-/ */
+	/* 1DX series 0 compression options */
+	{ N_("Small"),				0x2100, 0 },
+	{ N_("Medium 1"),			0x5100, 0 },
+	{ N_("Medium 2"),			0x6100, 0 },
+	{ N_("Large"),				0x0100, 0 },
+	{ N_("Small + RAW"),			0x0c21, 0 },
+	{ N_("Medium 1 + RAW"),			0x0c51, 0 },
+	{ N_("Medium 2 + RAW"),			0x0c61, 0 },
+	{ N_("Large + RAW"),			0x0c01, 0 },
+	{ N_("Small + cRAW"),			0x0b21, 0 },
+	{ N_("Medium 1 + cRAW"),		0x0b51, 0 },
+	{ N_("Medium 2 + cRAW"),		0x0b61, 0 },
+	{ N_("Large + cRAW"),			0x0b01, 0 },
+
+	/* 1DX mark ii */
+	{ N_("Large + mRAW"),			0x1c01, 0 },
+	{ N_("Medium 1 + mRAW"),		0x1c51, 0 },
+	{ N_("Medium 2 + mRAW"),		0x1c61, 0 },
+	{ N_("Small + mRAW"),			0x1c21, 0 },
+	{ N_("Large + sRAW"),			0x2c01, 0 },
+	{ N_("Medium 1 + sRAW"),		0x2c51, 0 },
+	{ N_("Medium 2 + sRAW"),		0x2c61, 0 },
+	{ N_("Small + sRAW"),			0x2c21, 0 },
 };
 GENERIC16TABLE(Canon_EOS_ImageFormat,canon_eos_image_format)
 
@@ -5875,6 +5898,7 @@ static struct deviceproptableu16 focusmodes[] = {
 	{ N_("AF-S"),		0x8010, PTP_VENDOR_NIKON },
 	{ N_("AF-C"),		0x8011, PTP_VENDOR_NIKON },
 	{ N_("AF-A"),		0x8012, PTP_VENDOR_NIKON },
+	{ N_("AF-F"),		0x8013, PTP_VENDOR_NIKON },
 	{ N_("Single-Servo AF"),0x8001, PTP_VENDOR_FUJI },
 	{ N_("Continuous-Servo AF"),0x8002, PTP_VENDOR_FUJI },
 
@@ -6826,6 +6850,22 @@ static struct deviceproptableu8 compressionsetting[] = {
 };
 GENERIC8TABLE(CompressionSetting,compressionsetting)
 
+static struct deviceproptableu8 sony_300_compression[] = {
+	{ N_("RAW"),         0x01, PTP_VENDOR_SONY },
+	{ N_("RAW+JPEG"),    0x02, PTP_VENDOR_SONY },
+	{ N_("JPEG"),        0x03, PTP_VENDOR_SONY },
+};
+GENERIC8TABLE(Sony_300_CompressionSetting,sony_300_compression)
+
+static struct deviceproptableu8 sony_300_jpegcompression[] = {
+	{ N_("n/a"),         0x00, PTP_VENDOR_SONY },
+	{ N_("X.Fine"),      0x01, PTP_VENDOR_SONY },
+	{ N_("Fine"),        0x02, PTP_VENDOR_SONY },
+	{ N_("Std"),         0x03, PTP_VENDOR_SONY },
+	{ N_("Light"),       0x04, PTP_VENDOR_SONY },
+};
+GENERIC8TABLE(Sony_300_JpegCompressionSetting,sony_300_jpegcompression)
+
 static struct deviceproptableu8 sony_qx_compression[] = {
 	{ N_("Standard"),	0x02, 0 },
 	{ N_("Fine"),		0x03, 0 },
@@ -6834,6 +6874,21 @@ static struct deviceproptableu8 sony_qx_compression[] = {
 	{ N_("RAW+JPEG"),	0x13, 0 },
 };
 GENERIC8TABLE(Sony_QX_Compression,sony_qx_compression)
+
+static struct deviceproptableu8 sony_pc_save_image_size[] = {
+	{ N_("Original"), 0x01, 0 },
+	{ N_("2M"),       0x02, 0 },
+};
+GENERIC8TABLE(Sony_PcSaveImageSize, sony_pc_save_image_size)
+
+static struct deviceproptableu8 sony_pc_save_image_format[] = {
+	{ N_("RAW & JPEG"),   0x01, 0 },
+	{ N_("JPEG Only"),    0x02, 0 },
+	{ N_("RAW Only"),     0x03, 0 },
+	{ N_("RAW & HEIF"),   0x04, 0 },
+	{ N_("HEIF Only"),    0x05, 0 }
+};
+GENERIC8TABLE(Sony_PcSaveImageFormat, sony_pc_save_image_format)
 
 static struct deviceproptableu8 sony_sensorcrop[] = {
 	{ N_("Off"),	0x01, 0 },
@@ -8196,6 +8251,8 @@ _put_Nikon_ViewFinder(CONFIG_PUT_ARGS) {
 	if (!ptp_operation_issupported(params, PTP_OC_NIKON_StartLiveView))
 		return GP_ERROR_NOT_SUPPORTED;
 
+	C_PTP_REP (ptp_nikon_device_ready(params));
+
 	CR (gp_widget_get_value (widget, &val));
 	if (val) {
 		PTPPropertyValue	value;
@@ -8231,7 +8288,7 @@ _put_Nikon_ViewFinder(CONFIG_PUT_ARGS) {
 			}
 		}
 
-                if (!value.u8) {
+		if (!value.u8) {
 			value.u8 = 1;
 			LOG_ON_PTP_E (ptp_setdevicepropvalue (params, PTP_DPC_NIKON_RecordingMedia, &value, PTP_DTC_UINT8));
 			C_PTP_REP_MSG (ptp_nikon_start_liveview (params),
@@ -8241,8 +8298,19 @@ _put_Nikon_ViewFinder(CONFIG_PUT_ARGS) {
 			params->inliveview = 1;
 		}
 	} else {
-		if (ptp_operation_issupported(params, PTP_OC_NIKON_EndLiveView))
-			C_PTP (ptp_nikon_end_liveview (params));
+		if (ptp_operation_issupported(params, PTP_OC_NIKON_EndLiveView)) {
+			// busy check here needed for some nikons to
+			// prevent bad camera state
+			C_PTP_REP (ptp_nikon_device_ready(params));
+
+			uint16_t res = ptp_nikon_end_liveview (params);
+			// printf("Live view end code: %d\n", res);
+			if (res == 0xa004) {
+				// PTP_C(ptp_nikon_device_ready(params));
+				return GP_ERROR_CAMERA_BUSY;
+			}
+			C_PTP(res);
+		}
 		params->inliveview = 0;
 	}
 	return GP_OK;
@@ -10847,8 +10915,12 @@ static struct submenu capture_settings_menu[] = {
 	{ N_("Live View Size"),			"liveviewsize",		    0,					    PTP_VENDOR_PANASONIC,PTP_DTC_INT32, _get_Panasonic_LiveViewSize,        _put_Panasonic_LiveViewSize },
 	{ N_("Movie F-Number"),                 "movief-number",            PTP_DPC_NIKON_MovieFNumber,             PTP_VENDOR_NIKON,   PTP_DTC_UINT16, _get_FNumber,                       _put_FNumber },
 	{ N_("Flexible Program"),               "flexibleprogram",          PTP_DPC_NIKON_FlexibleProgram,          PTP_VENDOR_NIKON,   PTP_DTC_INT8,   _get_Range_INT8,                    _put_Range_INT8 },
+	{ N_("Image Quality"),			"imagequality",		    PTP_DPC_SONY_CompressionSetting,	    PTP_VENDOR_SONY,	PTP_DTC_UINT8,	_get_Sony_300_CompressionSetting,   _put_Sony_300_CompressionSetting },
 	{ N_("Image Quality"),                  "imagequality",             PTP_DPC_CompressionSetting,             PTP_VENDOR_SONY,    PTP_DTC_UINT8,  _get_CompressionSetting,            _put_Sony_CompressionSetting },
 	{ N_("Image Quality"),                  "imagequality",             PTP_DPC_CompressionSetting,             0,                  PTP_DTC_UINT8,  _get_CompressionSetting,            _put_CompressionSetting },
+	{ N_("JPEG Quality"),			"jpegquality",              PTP_DPC_SONY_JpegQuality,               PTP_VENDOR_SONY,    PTP_DTC_UINT8,  _get_Sony_300_JpegCompressionSetting,   _put_Sony_300_JpegCompressionSetting },
+	{ N_("PC Save Image Size"),		"pcsaveimgsize",            PTP_DPC_SONY_PcSaveImageSize,           PTP_VENDOR_SONY,    PTP_DTC_UINT8,  _get_Sony_PcSaveImageSize,          _put_Sony_PcSaveImageSize },
+	{ N_("PC Save Image Format"),		"pcsaveimgformat",	    PTP_DPC_SONY_PcSaveImageFormat,         PTP_VENDOR_SONY,    PTP_DTC_UINT8,  _get_Sony_PcSaveImageFormat,        _put_Sony_PcSaveImageFormat },
 	{ N_("Focus Distance"),                 "focusdistance",            PTP_DPC_FocusDistance,                  0,                  PTP_DTC_UINT16, _get_FocusDistance,                 _put_FocusDistance },
 	{ N_("Focal Length"),                   "focallength",              PTP_DPC_FocalLength,                    0,                  PTP_DTC_UINT32, _get_FocalLength,                   _put_FocalLength },
 	{ N_("Focus Mode"),                     "focusmode",                PTP_DPC_FocusMode,                      PTP_VENDOR_SONY,    PTP_DTC_UINT16, _get_FocusMode,                     _put_Sony_FocusMode },
